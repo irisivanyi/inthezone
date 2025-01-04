@@ -77,18 +77,22 @@
 </div>
 
 <div class="add">
+    <div class="button-container">
     <button class="button" id="button-dashed"><img src="add.svg" alt="Add">Add
         <div class="modal-up">Soon...</div>
     </button>
+    </div>
 </div>
 </div>
 
 
 <div class="bottom-content">
+    <div class="button-container">
     <button class="button" id="button-disabled">
         <img src="schedule.svg" alt="Schedule">Schedule meeting
         <div class="modal-up">Coming soon...</div>
       </button>
+    </div>
     <p><a href="https://pattern-software.com" target="_blank">Pattern</a>, 2024</p>
 </div>
 
@@ -316,56 +320,127 @@ document.querySelectorAll('input[type="time"], #timezone1, #timezone2, #timezone
 
 
 
-
 // Add event listeners to buttons for mobile tap functionality
 const buttonContainers = document.querySelectorAll('.button-container');
 
 buttonContainers.forEach(container => {
     const button = container.querySelector('.button');
     const modalDown = container.querySelector('.modal-down');
+    const modalUp = container.querySelector('.modal-up'); // Select the modal-up
 
+    // Handle modal-down for mobile
     button.addEventListener('click', (event) => {
         // Prevent the click event from bubbling up to the button's hover effect
         event.stopPropagation();
         
         if (window.innerWidth <= 700) { // Only for mobile
-            modalDown.style.opacity = '1';
-            modalDown.style.visibility = 'visible';
+            if (modalDown) {
+                modalDown.style.opacity = '1';
+                modalDown.style.visibility = 'visible';
+                modalDown.style.transform = 'scale(1) translateY(0.8em)'; // Animate in (down)
 
-            // Set a timeout to hide the modal after 1 second
-            setTimeout(() => {
-                modalDown.style.opacity = '0';
-                modalDown.style.visibility = 'hidden';
-            }, 1000);
+                // Set a timeout to hide the modal after 1 second
+                setTimeout(() => {
+                    modalDown.style.opacity = '0';
+                    modalDown.style.visibility = 'hidden';
+                    modalDown.style.transform = 'scale(0.96) translateY(0.4em)'; // Animate out (up)
+                }, 1000);
+            }
         }
     });
 
-    // Show modal on mouse enter for desktop
+    // Handle modal-up for mobile
+    button.addEventListener('click', (event) => {
+        // Prevent the click event from bubbling up to the button's hover effect
+        event.stopPropagation();
+        
+        if (window.innerWidth <= 700) { // Only for mobile
+            if (modalUp) {
+                modalUp.style.opacity = '1';
+                modalUp.style.visibility = 'visible';
+                modalUp.style.transform = 'scale(1) translateY(-6.4em)'; // Animate in (down)
+
+                // Set a timeout to hide the modal after 1 second
+                setTimeout(() => {
+                    modalUp.style.opacity = '0';
+                    modalUp.style.visibility = 'hidden';
+                    modalUp.style.transform = 'scale(0.96) translateY(-6.2em)'; // Animate out (up)
+                }, 1000);
+            }
+        }
+    });
+
+    // Show modal-down on mouse enter for desktop
     button.addEventListener('mouseenter', () => {
         if (window.innerWidth > 700) { // Only for desktop
-            modalDown.style.opacity = '1';
-            modalDown.style.visibility = 'visible';
+            if (modalDown) {
+                modalDown.style.opacity = '1';
+                modalDown.style.visibility = 'visible';
+                modalDown.style.transform = 'scale(1) translateY(0.8em)'; // Animate in (down)
+            }
         }
     });
 
-    // Hide modal on mouse leave for desktop
+    // Hide modal-down on mouse leave for desktop
     container.addEventListener('mouseleave', () => {
         if (window.innerWidth > 700) { // Only for desktop
-            modalDown.style.opacity = '0';
-            modalDown.style.visibility = 'hidden';
+            if (modalDown) {
+                modalDown.style.opacity = '0';
+                modalDown.style.visibility = 'hidden';
+                modalDown.style.transform = 'scale(0.96) translateY(0.6em)'; // Animate out (up)
+            }
         }
     });
 
-    // Prevent flickering by keeping the modal visible when hovering over it
-    modalDown.addEventListener('mouseenter', () => {
-        modalDown.style.opacity = '1';
-        modalDown.style.visibility = 'visible';
+    // Prevent flickering by keeping the modal-down visible when hovering over it
+    if (modalDown) {
+        modalDown.addEventListener('mouseenter', () => {
+            modalDown.style.opacity = '1';
+            modalDown.style.visibility = 'visible';
+        });
+
+        modalDown.addEventListener('mouseleave', () => {
+            modalDown.style.opacity = '0';
+            modalDown.style.visibility = 'hidden';
+            modalDown.style.transform = 'scale(0.96) translateY(0.6em)'; // Animate out (up)
+        });
+    }
+
+    // Show modal-up on mouse enter for desktop
+    button.addEventListener('mouseenter', () => {
+        if (window.innerWidth > 700) { // Only for desktop
+            if (modalUp) {
+                modalUp.style.opacity = '1';
+                modalUp.style.visibility = 'visible';
+                modalUp.style.transform = 'scale(1) translateY(-6.4em)'; // Animate in (down)
+            }
+        }
     });
 
-    modalDown.addEventListener('mouseleave', () => {
-        modalDown.style.opacity = '0';
-        modalDown.style.visibility = 'hidden';
+    // Hide modal-up on mouse leave for desktop
+    container.addEventListener('mouseleave', () => {
+        if (window.innerWidth > 700) { // Only for desktop
+            if (modalUp) {
+                modalUp.style.opacity = '0';
+                modalUp.style.visibility = 'hidden';
+                modalUp.style.transform = 'scale(0.96) translateY(-6.2em)'; // Animate out (up)
+            }
+        }
     });
+
+    // Prevent flickering by keeping the modal-up visible when hovering over it
+    if (modalUp) {
+        modalUp.addEventListener('mouseenter', () => {
+            modalUp.style.opacity = '1';
+            modalUp.style.visibility = 'visible';
+        });
+
+        modalUp.addEventListener('mouseleave', () => {
+            modalUp.style.opacity = '0';
+            modalUp.style.visibility = 'hidden';
+            modalUp.style.transform = 'scale(0.96) translateY(-6.2em)'; // Animate out (up)
+        });
+    }
 });
 
 
