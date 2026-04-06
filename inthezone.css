@@ -20,10 +20,10 @@
 
 .header {
     display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  gap: 28px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding-top: 0.5em;
 }
 
 .time-functions {
@@ -32,26 +32,178 @@
     flex-direction: column;
 }
 
+/* Add: always occupies layout space; invisible until edit mode (avoids jump) */
+.time-functions .add {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    align-items: center;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.edit-mode .time-functions .add {
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Full-width wrapper so #button-dashed % matches .time-zone % (not only in edit mode — avoids collapse + width jump when toggling) */
+.time-functions .add .button-container {
+    width: 100%;
+    display: block;
+    text-align: center;
+    box-sizing: border-box;
+}
+
 .time-zone {
     width: 20%;
+    box-sizing: border-box;
     border-radius: 36px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding-left: 2%;
-    padding-right: 2%;
+    padding-left: 1%;
+    padding-right: 1%;
     padding-top: 2%;
     padding-bottom: 2%;
-    gap: 0.5em;
-    transition: all 0.25s ease-in-out;
+    gap: 1em;
     border: 1px solid rgba(0, 0, 0, 0);
+    position: relative;
 
 }
 
 .time-zone:hover {
-    transition: all 0.15s ease-in-out;
     border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Main column: select + time (same visual weight default vs edit) */
+.time-zone-main {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0.5em;
+    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Fill the middle column (overrides global 50% / 70% on select + time) */
+.time-zone-main .timezone-select,
+.time-zone-main input[type="time"] {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    transition: none;
+}
+
+/* Side controls always in layout; invisible when not editing so cards don’t resize */
+.drag-handle,
+.remove-zone {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    align-self: center;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.edit-mode .drag-handle,
+.edit-mode .remove-zone {
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.edit-mode .drag-handle {
+    touch-action: none;
+}
+
+/* Reorder: icon only — no box (12px asset); padding = hit target */
+.drag-handle {
+    margin: 0;
+    padding: 0.5em;
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    cursor: grab;
+    user-select: none;
+    -webkit-appearance: none;
+    appearance: none;
+    font: inherit;
+    min-width: 0;
+    min-height: 0;
+    transition: opacity 0.1s ease-in-out;
+}
+
+.time-zone-toolbar-icon {
+    display: block;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    object-fit: contain;
+    object-position: center;
+    /* Avoid native image-drag ghost (browser default can look like a globe / wrong preview) */
+    -webkit-user-drag: none;
+    user-select: none;
+}
+
+.drag-handle:focus,
+.drag-handle:focus-visible {
+    outline: none;
+}
+
+.drag-handle:disabled {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Remove: 10% black fill, no stroke */
+.remove-zone {
+    margin: 0;
+    padding: 0.35em;
+    min-width: 0;
+    min-height: 0;
+    border: none;
+    outline: none;
+    border-radius: 999px;
+    background-color: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.75);
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    box-shadow: none;
+    transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out, opacity 0.1s ease-in-out;
+}
+
+.remove-zone:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.16);
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.remove-zone:focus,
+.remove-zone:focus-visible {
+    outline: none;
+}
+
+.remove-zone:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.time-zone.drag-over {
+    outline: 2px solid rgba(0, 0, 0, 0.2);
+    outline-offset: -2px;
+}
+
+.time-zone.dragging {
+    opacity: 0.6;
 }
 
 #green {
@@ -75,11 +227,72 @@
     gap: 2em;
 }
 
+/* Reset → Schedule → Edit (single row; wraps on narrow viewports) */
+.bottom-actions,
+#reset-button-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Toolbar icons: use .bottom-toolbar-btn — reset is #icon only (no .button), so .button img missed it */
+.bottom-toolbar-btn img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* Reset, Schedule, Edit — shared chrome, no drop shadow, 50% shorter transitions */
+.bottom-toolbar-btn {
+    color: #000000;
+    box-shadow: none;
+    transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out, transform 0.05s ease-in-out;
+}
+
+.bottom-toolbar-btn:hover {
+    background-color: rgba(0, 0, 0, 0.17);
+    cursor: pointer;
+    box-shadow: none;
+}
+
+/* #icon uses an ID for base background — need matching specificity for toolbar hover */
+#icon.bottom-toolbar-btn:hover {
+    background-color: rgba(0, 0, 0, 0.17);
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.bottom-toolbar-btn:active {
+    transform: scale(0.96);
+    background-color: rgba(0, 0, 0, 0.20);
+}
+
+#icon.bottom-toolbar-btn:active {
+    transform: scale(0.96);
+    background-color: rgba(0, 0, 0, 0.20);
+}
+
+.edit-mode #button-edit:active {
+    transform: scale(0.96);
+    background-color: rgba(200, 230, 120, 0.95);
+}
+
 
 input[type="time"]::-webkit-inner-spin-button,
 input[type="time"]::-webkit-calendar-picker-indicator {
     display: none;
     -webkit-appearance: none;
+}
+
+input[type="time"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
 }
 
 input[type="time"] {
@@ -92,20 +305,17 @@ input[type="time"] {
     border-radius: 14px;
     text-align: center;
     background-color: rgba(0, 0, 0, 0.10);
-    transition: all 0.2s ease-in-out;
     border: 1px solid transparent;
     cursor: text;
 }
 
 input[type="time"]:hover {
     background-color: rgba(0, 0, 0, 0.15);
-    transition: all 0.2s ease-in-out;
     border: 1px solid transparent;
 }
 
 input[type="time"]:focus {
     background-color: rgba(0, 0, 0, 0.17);
-    transition: all 0.1s ease-in-out;
     border: 1px solid black;
 }
 
@@ -132,7 +342,7 @@ select, input:focus {
     outline: none;
 }
 
-#timezone1, #timezone2, #timezone3 {
+#timezone1, #timezone2, #timezone3, .timezone-select {
     font-family: 'Courier New', Courier, monospace;
     font-size: 1em;
     line-height: 1em;
@@ -142,34 +352,30 @@ select, input:focus {
     border-radius: 14px;
     text-align: center;
     background-color: rgba(0, 0, 0, 0.10);
-    transition: all 0.2s ease-in-out;
     border: 1px solid transparent;
     cursor: pointer;
 }
 
-#timezone1:hover, #timezone2:hover, #timezone3:hover {
+#timezone1:hover, #timezone2:hover, #timezone3:hover, .timezone-select:hover {
     height: 2.5em;
     border: none;
     border-radius: 14px;
     text-align: center;
     background-color: rgba(0, 0, 0, 0.15);
-    transition: all 0.2s ease-in-out;
     border: 1px solid transparent;
 
 }
 
-#timezone1:active, #timezone2:active, #timezone3:active {
-    height: 3em;
+#timezone1:active, #timezone2:active, #timezone3:active, .timezone-select:active {
+    height: 2.5em;
     border-radius: 14px;
     text-align: center;
     background-color: rgba(0, 0, 0, 0.17);
-    transition: all 0.2s ease-in-out;
     border: 1px solid transparent;
 
 }
 
-#timezone1:focus, #timezone2:focus, #timezone3:focus {
-    transition: all 0.2s ease-in-out;
+#timezone1:focus, #timezone2:focus, #timezone3:focus, .timezone-select:focus {
     border: 1px solid black;
 
 }
@@ -183,7 +389,7 @@ select, input:focus {
   border-radius: 14px;
   background-color: rgba(0, 0, 0, 0.10);
   padding: 1em;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.1s ease-in-out;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -193,15 +399,34 @@ select, input:focus {
   white-space: nowrap;
 }
 
-#button-disabled {
-    color: #8A8A8A;
-    pointer-events: default;
+/* Primary actions: match default button text (not placeholder grey) */
+#button-edit,
+#button-schedule,
+#button-dashed {
+    color: #000000;
+}
+
+/* Edit toggle shows "Done" in edit mode — same green as timezone cards (#green) */
+.edit-mode #button-edit {
+    background-color: #DEF792;
+    color: #000000;
+}
+
+.edit-mode #button-edit:hover {
+    background-color: rgba(222, 247, 146, 0.92);
+    transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out, transform 0.05s ease-in-out;
 }
 
 .button:hover {
     background-color: rgba(0, 0, 0, 0.17);
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    transition: all 0.1s ease-in-out;
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: default;
+    pointer-events: none;
 }
 
 
@@ -292,13 +517,17 @@ select, input:focus {
 #button-dashed {
     background-color: white;
     border: 1px dashed rgba(0, 0, 0, 0.35);
-    transition: all 0.2s ease-in-out;
-    color: #8A8A8A;
+    /* Don’t use transition: all — width/layout would animate when edit mode toggles */
+    transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out, opacity 0.1s ease-in-out;
+    color: #000000;
+    width: 20%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
-#button-dashed:hover {
+#button-dashed:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.04);
     border: 1px dashed rgba(0, 0, 0, 0.35);
-    transition: all 0.2s ease-in-out;
 }
 
 #icon {
@@ -314,7 +543,6 @@ select, input:focus {
     align-items: center;
     justify-content: center;
     background-color: rgba(0, 0, 0, 0.10);
-    transition: all 0.2s ease-in-out;
     -webkit-tap-highlight-color: transparent;
     padding-left: 1em;
     padding-right: 1em;
@@ -326,38 +554,6 @@ select, input:focus {
     color: inherit;
     -webkit-text-fill-color: inherit;
   }
-  
-
-#reset-button-container {
-    display: flex;
-    flex-wrap: wrap;
-}
-
-.icon {
-    transition: transform 0.2s ease-in-out;
-}
-
-#icon:hover .icon {
-    transform: rotate(-135deg);
-}
-
-#icon:hover {
-    background-color: rgba(0, 0, 0, 0.17);
-    cursor: pointer;
-    box-shadow: 0px 0px 16px 0px rgba(0, 0, 0, 0.13);
-    transition: all 0.2s ease-in-out;
-
-
-}
-
-#icon:active {
-    transform: scale(0.96);
-    background-color: rgba(0, 0, 0, 0.20);
-    transition: all 0.1s ease-in-out;
-}
-
-
-
 h1 {
     font-family: 'Courier New', Courier, monospace;
     font-weight: 100;
@@ -400,9 +596,15 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Grabbing while pointer reorder is active (pointer-based, not HTML5 DnD) */
+body.is-dragging-zone-row,
+body.is-dragging-zone-row * {
+    cursor: grabbing !important;
+}
+
 
 @media (max-width: 900px) {
-    #timezone1, #timezone2, #timezone3 {
+    #timezone1, #timezone2, #timezone3, .timezone-select {
         font-family: 'Courier New', Courier, monospace;
         font-size: 1em;
         line-height: 1em;
@@ -412,7 +614,6 @@ body {
         border-radius: 14px;
         text-align: center;
         background-color: rgba(0, 0, 0, 0.10);
-        transition: all 0.1s ease-in-out;
         border: 1px solid transparent;
     }
 
@@ -426,7 +627,6 @@ body {
         border-radius: 14px;
         text-align: center;
         background-color: rgba(0, 0, 0, 0.10);
-        transition: all 0.1s ease-in-out;
         border: 1px solid transparent;
     }
   }
@@ -449,16 +649,22 @@ body {
 
     .time-zone {
         width: 60%;
+        box-sizing: border-box;
         border-radius: 36px;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
         justify-content: center;
         padding-left: 2%;
         padding-right: 2%;
         padding-top: 4%;
         padding-bottom: 4%;
-        gap: 0.5em;
+        gap: 0.15em;
+    }
+
+    #button-dashed {
+        width: 60%;
+        box-sizing: border-box;
     }
 
     .header {
@@ -483,23 +689,24 @@ body {
         -webkit-tap-highlight-color: transparent;
       }
     
-      #icon:active, input[type="time"]:active, .button:active {
+      /* Don’t flatten :active on bottom toolbar (reset / schedule / edit) — uses .bottom-toolbar-btn */
+      input[type="time"]:active,
+      .button:active:not(.bottom-toolbar-btn) {
         background-color: rgba(0, 0, 0, 0.10);
       }
 
 
 
 
-     input[type="time"], #timezone1, #timezone2, #timezone3 {
+     input[type="time"], #timezone1, #timezone2, #timezone3, .timezone-select {
   background-color: rgba(0, 0, 0, 0.10); /* Default background */
-  transition: background-color 0.2s ease-in-out;
 }
 
-input[type="time"]:focus, #timezone1:focus, #timezone2:focus, #timezone3:focus {
+input[type="time"]:focus, #timezone1:focus, #timezone2:focus, #timezone3:focus, .timezone-select:focus {
   background-color: rgba(0, 0, 0, 0.17); /* Focused background */
 }
 
-input[type="time"].value-set, #timezone1.value-set, #timezone2.value-set, #timezone3.value-set {
+input[type="time"].value-set, #timezone1.value-set, #timezone2.value-set, #timezone3.value-set, .timezone-select.value-set {
   background-color: rgba(0, 0, 0, 0.10); /* Background after value is set */
 }
 
@@ -536,7 +743,7 @@ input[type="time"].value-set, #timezone1.value-set, #timezone2.value-set, #timez
     }
     
 
-    #timezone1, #timezone2, #timezone3 {
+    #timezone1, #timezone2, #timezone3, .timezone-select {
     text-align: center;
     background-color: rgba(0, 0, 0, 0.10);
     border: none;

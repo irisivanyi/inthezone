@@ -12,74 +12,16 @@
 <div class="all-content">
  
     <div class="header">
-            <button id="icon"></button>
         <h1>In The Zone</h1>
-        <div class="button-container">
-            <button class="button" id="button-disabled">Edit</button>
-            <div class="modal-down">Coming shortly</div>
-        </div>
     </div>
 
 
 <div class="time-functions">
-<div class="all-time-zones">
-    <div class="time-zone" id="green">
-        <select id="timezone1">
-            <option value="local">Local Time</option>
-            <option value="America/Los_Angeles">Los Angeles</option>
-            <option value="America/Denver">Denver</option>
-            <option value="America/Chicago">Chicago</option>
-            <option value="America/New_York">New York</option>
-            <option value="Europe/London">London</option>
-            <option value="Europe/Berlin">Berlin</option>
-            <option value="Europe/Istanbul">Istanbul</option>
-            <option value="Asia/Dubai">Dubai</option>
-            <option value="Asia/Bangkok">Bangkok</option>
-            <option value="Asia/Shanghai">Shanghai</option>
-            <option value="Asia/Tokyo">Tokyo</option>
-        </select>
-        <input type="time" id="time1">
-    </div>
-    <div class="time-zone" id="blue">
-        <select id="timezone2">
-            <option value="local">Local Time</option>
-            <option value="America/Los_Angeles">Los Angeles</option>
-            <option value="America/Denver">Denver</option>
-            <option value="America/Chicago">Chicago</option>
-            <option value="America/New_York">New York</option>
-            <option value="Europe/London">London</option>
-            <option value="Europe/Berlin">Berlin</option>
-            <option value="Europe/Istanbul">Istanbul</option>
-            <option value="Asia/Dubai">Dubai</option>
-            <option value="Asia/Bangkok">Bangkok</option>
-            <option value="Asia/Shanghai">Shanghai</option>
-            <option value="Asia/Tokyo">Tokyo</option>
-        </select>
-        <input type="time" id="time2">
-    </div>
-    <div class="time-zone" id="brown">
-        <select id="timezone3">
-            <option value="local">Local Time</option>
-            <option value="America/Los_Angeles">Los Angeles</option>
-            <option value="America/Denver">Denver</option>
-            <option value="America/Chicago">Chicago</option>
-            <option value="America/New_York">New York</option>
-            <option value="Europe/London">London</option>
-            <option value="Europe/Berlin">Berlin</option>
-            <option value="Europe/Istanbul">Istanbul</option>
-            <option value="Asia/Dubai">Dubai</option>
-            <option value="Asia/Bangkok">Bangkok</option>
-            <option value="Asia/Shanghai">Shanghai</option>
-            <option value="Asia/Tokyo">Tokyo</option>
-        </select>
-        <input type="time" id="time3">
-    </div>
-</div>
+<div class="all-time-zones" id="zones-container"></div>
 
 <div class="add">
     <div class="button-container">
-    <button class="button" id="button-dashed"><img src="add.svg" alt="Add">Add
-        <div class="modal-up">Soon...</div>
+    <button type="button" class="button" id="button-dashed"><img src="add.svg" alt="Add">Add
     </button>
     </div>
 </div>
@@ -87,23 +29,34 @@
 
 
 <div class="bottom-content">
-    <div class="button-container">
-    <button class="button" id="button-disabled">
-        <img src="schedule.svg" alt="Schedule">Schedule meeting
-        <div class="modal-up">Coming soon...</div>
-      </button>
+    <div id="reset-button-container" class="bottom-actions">
+        <button type="button" class="bottom-toolbar-btn" id="icon" aria-label="Reset to current time"></button>
+        <div class="button-container">
+            <button type="button" class="button bottom-toolbar-btn" id="button-schedule">
+                <img src="schedule.svg" alt="Schedule">Schedule meeting
+            </button>
+        </div>
+        <div class="button-container">
+            <button type="button" class="button bottom-toolbar-btn" id="button-edit" aria-label="Edit">
+                <img class="edit-button-icon" src="edit.svg" alt="">
+                <span class="edit-button-label">Edit</span>
+            </button>
+            <div class="modal-down">Coming shortly</div>
+        </div>
     </div>
-    <p><a href="https://pattern-software.com" target="_blank">Pattern</a>, 2024</p>
+    <p><a href="https://pattern-software.com" target="_blank">pattern.works</a>, 2026</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
 <script>
-    const timezone1 = document.getElementById('timezone1');
-    const timezone2 = document.getElementById('timezone2');
-    const timezone3 = document.getElementById('timezone3');
-    const time1 = document.getElementById('time1');
-    const time2 = document.getElementById('time2');
-    const time3 = document.getElementById('time3');
+    // Legacy (pre-edit-mode) references. The markup was replaced with dynamic rows,
+    // but we keep these guards so the older conversion code doesn't crash.
+    const timezone1 = document.getElementById('timezone1') || { value: 'local', addEventListener: function () {} };
+    const timezone2 = document.getElementById('timezone2') || { value: 'local', addEventListener: function () {} };
+    const timezone3 = document.getElementById('timezone3') || { value: 'local', addEventListener: function () {} };
+    const time1 = document.getElementById('time1') || { value: '', addEventListener: function () {}, classList: { add: function () {}, remove: function () {} } };
+    const time2 = document.getElementById('time2') || { value: '', addEventListener: function () {}, classList: { add: function () {}, remove: function () {} } };
+    const time3 = document.getElementById('time3') || { value: '', addEventListener: function () {}, classList: { add: function () {}, remove: function () {} } };
 
     const timezones = [
         'local', 'America/Chicago', 'America/New_York', 'America/Denver', 'America/Los_Angeles', 
@@ -250,10 +203,11 @@ timezone3.addEventListener('change', () => {
 
 // Update the reset button text to display the current local time
 function updateResetButtonTime() {
-    const currentTime = luxon.DateTime.local().toFormat('HH:mm'); // Get the current local time
     const resetButton = document.getElementById('icon');
+    if (!resetButton) return;
+    const currentTime = luxon.DateTime.local().toFormat('HH:mm');
     resetButton.innerHTML = `
-        <img src="rotate.svg" alt="Icon" class="icon">
+        <img src="rotate.svg" alt="">
         ${currentTime}
     `;
 }
@@ -275,9 +229,7 @@ window.addEventListener('load', updateResetButtonTime);
 // Add interval to update the reset button text every minute
 setInterval(updateResetButtonTime, 60000); // Updates every 60 seconds
 
-// Add event listener for reset functionality
-document.getElementById('icon').addEventListener('click', resetToCurrentTime);
-
+// Reset click is handled by the dynamic zones module (itz_zones_v1).
 
 // Assuming you have a reference to your dropdown elements
 const dropdowns = document.querySelectorAll('#timezone1, #timezone2, #timezone3');
@@ -289,9 +241,7 @@ dropdowns.forEach(dropdown => {
 });
 
 
-document.getElementById('icon').addEventListener('touchend', function () {
-    this.classList.remove('active'); // Remove any active styles manually
-});
+// icon touchend handled in dynamic zones module
 
 
 
@@ -446,6 +396,738 @@ buttonContainers.forEach(container => {
 
 
 
+    // ===== Edit mode: dynamic time zones (add/remove + drag reorder) =====
+    (function () {
+        const MAX_ZONES = 9;
+        const MIN_ZONES = 2;
+        const STORAGE_KEY = 'itz_zones_v1';
+
+        const zonesContainer = document.getElementById('zones-container');
+        const addBtn = document.getElementById('button-dashed');
+        const iconBtn = document.getElementById('icon');
+        const editToggleBtn = document.getElementById('button-edit');
+        const scheduleBtn = document.getElementById('button-schedule');
+
+        /** Row whose time input last had focus — used for Schedule; falls back with activeSourceIndex at init */
+        let lastFocusedTimeZoneIndex = 0;
+
+        const TIMEZONE_OPTIONS = [
+            'local',
+            'America/Los_Angeles',
+            'America/Denver',
+            'America/Chicago',
+            'America/New_York',
+            'Europe/London',
+            'Europe/Berlin',
+            'Europe/Istanbul',
+            'Asia/Dubai',
+            'Asia/Bangkok',
+            'Asia/Shanghai',
+            'Asia/Tokyo'
+        ];
+        const NON_LOCAL_TIMEZONES = TIMEZONE_OPTIONS.filter(tz => tz !== 'local');
+        const ZONE_BG = ['#DEF792', '#B6DDFC', '#CCC8B7'];
+
+        let zones = [];
+        let editMode = false;
+        let activeSourceIndex = 0;
+        /** Pointer-based reorder only (no HTML5 DnD — avoids broken cursor during native drag). */
+        const REORDER_MOVE_THRESHOLD_PX = 6;
+        let reorderPointerId = null;
+        let reorderHandleEl = null;
+        let reorderFromIndex = null;
+        let reorderPendingFromIndex = null;
+        let reorderStartX = 0;
+        let reorderStartY = 0;
+        let reorderActivated = false;
+
+        let persistTimer = null;
+        /** While true, zone times follow the wall clock (until the user edits a time or hits reset). */
+        let clockSyncEnabled = true;
+        let clockTimer = null;
+
+        function convertTime(inputTime, fromZone, toZone) {
+            if (!inputTime) return '';
+            const [hours, minutes] = inputTime.split(':');
+            const fromDateTime = luxon.DateTime.fromObject(
+                { hour: hours || 0, minute: minutes || 0 },
+                { zone: fromZone === 'local' ? luxon.DateTime.local().zoneName : fromZone }
+            );
+            const toDateTime = fromDateTime.setZone(toZone === 'local' ? luxon.DateTime.local().zoneName : toZone);
+            return toDateTime.toFormat('HH:mm');
+        }
+
+        function formatTimezoneLabel(value) {
+            if (value === 'local') return 'Local Time';
+            const last = String(value).split('/').pop() || value;
+            return last
+                .replace(/_/g, ' ')
+                .toLowerCase()
+                .replace(/\b[a-z]/g, m => m.toUpperCase());
+        }
+
+        function getCurrentTimeInZone(zoneValue) {
+            const zone = zoneValue === 'local' ? luxon.DateTime.local().zoneName : zoneValue;
+            return luxon.DateTime.now().setZone(zone).toFormat('HH:mm');
+        }
+
+        function luxonZoneFor(zoneValue) {
+            return zoneValue === 'local' ? luxon.DateTime.local().zoneName : zoneValue;
+        }
+
+        /** Google Calendar “create event” (TEMPLATE) in UTC; rolls to next calendar day in that zone if time has passed */
+        function openGoogleCalendarForZoneRow(rowIndex) {
+            if (!zones.length) return;
+            rowIndex = clamp(rowIndex, 0, zones.length - 1);
+            const row = zones[rowIndex];
+            const zone = luxonZoneFor(row.zoneValue);
+            let timeStr = (row.timeValue && String(row.timeValue).trim()) || '';
+            if (!/^\d{1,2}:\d{2}$/.test(timeStr)) {
+                timeStr = getCurrentTimeInZone(row.zoneValue);
+            }
+            const parts = timeStr.split(':');
+            const hour = parseInt(parts[0], 10);
+            const minute = parseInt(parts[1], 10);
+            const h = Number.isFinite(hour) ? hour : 0;
+            const min = Number.isFinite(minute) ? minute : 0;
+
+            const now = luxon.DateTime.now().setZone(zone);
+            let start = now.set({ hour: h, minute: min, second: 0, millisecond: 0 });
+            if (start < now) {
+                start = start.plus({ days: 1 });
+            }
+            const end = start.plus({ hours: 1 });
+
+            function toGoogleUtc(dt) {
+                return dt.toUTC().toFormat("yyyyMMdd'T'HHmmss") + 'Z';
+            }
+
+            const dates = `${toGoogleUtc(start)}/${toGoogleUtc(end)}`;
+            const title = `Meeting — ${formatTimezoneLabel(row.zoneValue)}`;
+            const details = 'Created from In The Zone';
+
+            const params = new URLSearchParams();
+            params.set('action', 'TEMPLATE');
+            params.set('text', title);
+            params.set('dates', dates);
+            params.set('details', details);
+
+            const url = `https://calendar.google.com/calendar/render?${params.toString()}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        function getRandomTimeZone() {
+            const idx = Math.floor(Math.random() * NON_LOCAL_TIMEZONES.length);
+            return NON_LOCAL_TIMEZONES[idx];
+        }
+
+        function generateId() {
+            return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        }
+
+        function clamp(n, min, max) {
+            return Math.min(Math.max(n, min), max);
+        }
+
+        function updateValueSetClass(inputEl) {
+            if (!inputEl) return;
+            if (inputEl.value) inputEl.classList.add('value-set');
+            else inputEl.classList.remove('value-set');
+        }
+
+        function updateDomTimes() {
+            const timeInputs = zonesContainer.querySelectorAll('input[data-role="time-input"]');
+            timeInputs.forEach((el, i) => {
+                if (!zones[i]) return;
+                el.value = zones[i].timeValue || '';
+                updateValueSetClass(el);
+            });
+        }
+
+        function computeAllFromSource(sourceIndex, options) {
+            const opts = options || {};
+            if (!zones.length) return;
+            sourceIndex = clamp(sourceIndex, 0, zones.length - 1);
+            activeSourceIndex = sourceIndex;
+
+            const source = zones[sourceIndex];
+            if (!source.timeValue) {
+                source.timeValue = getCurrentTimeInZone(source.zoneValue);
+            }
+            const sourceTime = source.timeValue;
+
+            for (let i = 0; i < zones.length; i++) {
+                if (i === sourceIndex) continue;
+                zones[i].timeValue = convertTime(sourceTime, source.zoneValue, zones[i].zoneValue);
+            }
+
+            updateDomTimes();
+            if (opts.skipPersist) return;
+            schedulePersist();
+        }
+
+        function schedulePersist() {
+            window.clearTimeout(persistTimer);
+            persistTimer = window.setTimeout(() => {
+                const payload = {
+                    version: 2,
+                    sourceIndex: activeSourceIndex,
+                    zones: zones.map(z => ({
+                        id: z.id,
+                        zoneValue: z.zoneValue,
+                        timeValue: z.timeValue || '',
+                        colorIndex: typeof z.colorIndex === 'number' ? z.colorIndex : 0
+                    }))
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            }, 150);
+        }
+
+        function tryLoad() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && (parsed.version === 1 || parsed.version === 2) && Array.isArray(parsed.zones) && typeof parsed.sourceIndex === 'number') {
+                        const loadedZones = parsed.zones
+                            .filter(z => z && typeof z.zoneValue === 'string')
+                            .slice(0, MAX_ZONES)
+                            .map((z, i) => ({
+                                id: typeof z.id === 'string' ? z.id : generateId(),
+                                zoneValue: TIMEZONE_OPTIONS.includes(z.zoneValue) ? z.zoneValue : getRandomTimeZone(),
+                                timeValue: typeof z.timeValue === 'string' ? z.timeValue : '',
+                                colorIndex: typeof z.colorIndex === 'number' ? z.colorIndex : i
+                            }));
+
+                        return {
+                            zones: loadedZones,
+                            sourceIndex: clamp(parsed.sourceIndex, 0, Math.max(0, loadedZones.length - 1))
+                        };
+                    }
+                } catch (e) {}
+            }
+
+            // Migration from legacy keys
+            const t1 = localStorage.getItem('timezone1');
+            const t2 = localStorage.getItem('timezone2');
+            const t3 = localStorage.getItem('timezone3');
+            const legacy = [t1, t2, t3].filter(v => v && TIMEZONE_OPTIONS.includes(v));
+            if (legacy.length >= MIN_ZONES) {
+                const initial = legacy.slice(0, MAX_ZONES).map((v, i) => ({
+                    id: generateId(),
+                    zoneValue: v,
+                    timeValue: '',
+                    colorIndex: i
+                }));
+                return { zones: initial, sourceIndex: 0 };
+            }
+
+            return null;
+        }
+
+        function ensureMinMax() {
+            zones = zones.slice(0, MAX_ZONES);
+            while (zones.length < MIN_ZONES) {
+                const i = zones.length;
+                zones.push({
+                    id: generateId(),
+                    zoneValue: getRandomTimeZone(),
+                    timeValue: '',
+                    colorIndex: i % ZONE_BG.length
+                });
+            }
+            zones.forEach((z, i) => {
+                if (typeof z.colorIndex !== 'number') z.colorIndex = i % ZONE_BG.length;
+            });
+            activeSourceIndex = clamp(activeSourceIndex, 0, zones.length - 1);
+        }
+
+        function createZoneRow(zone, index) {
+            const row = document.createElement('div');
+            row.className = 'time-zone';
+            row.dataset.zoneIndex = String(index);
+            row.dataset.zoneId = String(zone.id);
+            const ci = typeof zone.colorIndex === 'number' ? zone.colorIndex : index;
+            row.style.backgroundColor = ZONE_BG[ci % ZONE_BG.length];
+
+            const dragHandle = document.createElement('button');
+            dragHandle.type = 'button';
+            dragHandle.className = 'drag-handle';
+            dragHandle.dataset.role = 'drag-handle';
+            dragHandle.title = 'Drag to reorder';
+            dragHandle.setAttribute('aria-label', 'Reorder');
+            const dragIcon = document.createElement('img');
+            dragIcon.className = 'time-zone-toolbar-icon';
+            dragIcon.src = 'reorder.svg';
+            dragIcon.alt = '';
+            dragIcon.draggable = false;
+            dragHandle.appendChild(dragIcon);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-zone';
+            removeBtn.dataset.role = 'remove-zone';
+            removeBtn.dataset.zoneIndex = String(index);
+            removeBtn.setAttribute('aria-label', 'Remove timezone');
+            removeBtn.disabled = !editMode || zones.length <= MIN_ZONES;
+            const removeIcon = document.createElement('img');
+            removeIcon.className = 'time-zone-toolbar-icon';
+            removeIcon.src = 'remove.svg';
+            removeIcon.alt = '';
+            removeIcon.draggable = false;
+            removeBtn.appendChild(removeIcon);
+
+            const main = document.createElement('div');
+            main.className = 'time-zone-main';
+
+            const select = document.createElement('select');
+            select.className = 'timezone-select';
+            select.dataset.role = 'timezone-select';
+            select.dataset.zoneIndex = String(index);
+
+            TIMEZONE_OPTIONS.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = formatTimezoneLabel(v);
+                select.appendChild(opt);
+            });
+
+            select.value = zone.zoneValue;
+            if (select.value) select.classList.add('value-set');
+
+            const timeInput = document.createElement('input');
+            timeInput.type = 'time';
+            timeInput.dataset.role = 'time-input';
+            timeInput.dataset.zoneIndex = String(index);
+            timeInput.value = zone.timeValue || '';
+            if (timeInput.value) timeInput.classList.add('value-set');
+
+            main.appendChild(select);
+            main.appendChild(timeInput);
+
+            row.appendChild(dragHandle);
+            row.appendChild(main);
+            row.appendChild(removeBtn);
+
+            return row;
+        }
+
+        function render() {
+            if (!zonesContainer) return;
+            zonesContainer.innerHTML = '';
+            zones.forEach((z, i) => zonesContainer.appendChild(createZoneRow(z, i)));
+        }
+
+        function syncControls() {
+            if (!zonesContainer) return;
+            if (addBtn) addBtn.disabled = zones.length >= MAX_ZONES;
+
+            const removeBtns = zonesContainer.querySelectorAll('[data-role="remove-zone"]');
+            removeBtns.forEach(btn => {
+                btn.disabled = !editMode || zones.length <= MIN_ZONES;
+            });
+
+        }
+
+        function setEditMode(next) {
+            editMode = !!next;
+            document.body.classList.toggle('edit-mode', editMode);
+
+            if (editToggleBtn) {
+                const labelEl = editToggleBtn.querySelector('.edit-button-label');
+                const iconEl = editToggleBtn.querySelector('.edit-button-icon');
+                if (labelEl) labelEl.textContent = editMode ? 'Done' : 'Edit';
+                if (iconEl) iconEl.src = editMode ? 'done.svg' : 'edit.svg';
+                editToggleBtn.setAttribute('aria-label', editMode ? 'Done' : 'Edit');
+            }
+
+            // Hide placeholder modals that say "Coming soon..." once the feature exists.
+            const editModalDown = editToggleBtn && editToggleBtn.parentElement
+                ? editToggleBtn.parentElement.querySelector('.modal-down')
+                : null;
+            if (editModalDown) editModalDown.style.display = 'none';
+
+            syncControls();
+        }
+
+        function addZone() {
+            if (zones.length >= MAX_ZONES) return;
+
+            const sourceIndex = clamp(activeSourceIndex, 0, zones.length - 1);
+            const source = zones[sourceIndex];
+            const used = new Set(zones.map(z => z.zoneValue));
+            const candidates = TIMEZONE_OPTIONS.filter(tz => !used.has(tz));
+            const newZoneValue = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : getRandomTimeZone();
+
+            const nextColor = zones.length;
+            const newZone = {
+                id: generateId(),
+                zoneValue: newZoneValue,
+                timeValue: convertTime(source.timeValue || getCurrentTimeInZone(source.zoneValue), source.zoneValue, newZoneValue),
+                colorIndex: nextColor % ZONE_BG.length
+            };
+
+            zones.push(newZone);
+            render();
+            computeAllFromSource(activeSourceIndex, { skipPersist: true });
+            syncControls();
+            schedulePersist();
+        }
+
+        function removeZone(index) {
+            if (!editMode) return;
+            if (zones.length <= MIN_ZONES) return;
+            if (index < 0 || index >= zones.length) return;
+
+            zones.splice(index, 1);
+            if (activeSourceIndex === index) activeSourceIndex = Math.min(index, zones.length - 1);
+            else if (activeSourceIndex > index) activeSourceIndex -= 1;
+
+            render();
+            computeAllFromSource(activeSourceIndex, { skipPersist: true });
+            syncControls();
+            schedulePersist();
+        }
+
+        /** Swap two zones (pairwise). Drop target = swap with dragged item only. */
+        function swapZones(fromIndex, toIndex) {
+            if (!editMode) return;
+            if (fromIndex === toIndex) return;
+            if (fromIndex < 0 || fromIndex >= zones.length) return;
+            if (toIndex < 0 || toIndex >= zones.length) return;
+
+            const sourceZoneId = zones[activeSourceIndex] ? zones[activeSourceIndex].id : null;
+
+            const a = zones[fromIndex];
+            zones[fromIndex] = zones[toIndex];
+            zones[toIndex] = a;
+
+            if (sourceZoneId) {
+                const idx = zones.findIndex(z => z.id === sourceZoneId);
+                activeSourceIndex = idx >= 0 ? idx : 0;
+            }
+
+            render();
+            computeAllFromSource(activeSourceIndex, { skipPersist: true });
+            syncControls();
+            schedulePersist();
+        }
+
+        function stopClockSync() {
+            clockSyncEnabled = false;
+            if (clockTimer) {
+                window.clearTimeout(clockTimer);
+                clockTimer = null;
+            }
+        }
+
+        function applyClockTick() {
+            if (!clockSyncEnabled || !zones.length) return;
+            const src = zones[activeSourceIndex];
+            if (!src) return;
+            src.timeValue = getCurrentTimeInZone(src.zoneValue);
+            updateDomTimes();
+            computeAllFromSource(activeSourceIndex);
+            if (typeof updateResetButtonTime === 'function') updateResetButtonTime();
+        }
+
+        function scheduleNextClockTick() {
+            if (clockTimer) window.clearTimeout(clockTimer);
+            if (!clockSyncEnabled) return;
+            const now = new Date();
+            const ms = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+            clockTimer = window.setTimeout(() => {
+                applyClockTick();
+                scheduleNextClockTick();
+            }, Math.max(ms, 250));
+        }
+
+        function startClockSync() {
+            stopClockSync();
+            clockSyncEnabled = true;
+            scheduleNextClockTick();
+        }
+
+        function resetToCurrentTime() {
+            const now = luxon.DateTime.local();
+            const currentTime = now.toFormat('HH:mm');
+            const localZoneName = now.zoneName;
+
+            zones.forEach(z => {
+                z.timeValue = convertTime(currentTime, localZoneName, z.zoneValue);
+            });
+
+            updateDomTimes();
+            computeAllFromSource(activeSourceIndex, { skipPersist: true });
+            schedulePersist();
+            startClockSync();
+            if (typeof updateResetButtonTime === 'function') updateResetButtonTime();
+        }
+
+        function bindEvents() {
+            if (editToggleBtn) {
+                editToggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setEditMode(!editMode);
+                });
+            }
+
+            if (addBtn) {
+                addBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    addZone();
+                });
+            }
+
+            if (iconBtn) {
+                iconBtn.addEventListener('click', resetToCurrentTime);
+                iconBtn.addEventListener('touchend', function () {
+                    this.classList.remove('active');
+                });
+            }
+
+            if (scheduleBtn) {
+                scheduleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openGoogleCalendarForZoneRow(lastFocusedTimeZoneIndex);
+                });
+            }
+
+            zonesContainer.addEventListener('focusin', (e) => {
+                const t = e.target;
+                if (!t || !t.dataset || t.dataset.role !== 'time-input') return;
+                const i = Number(t.dataset.zoneIndex);
+                if (!Number.isNaN(i) && zones[i]) lastFocusedTimeZoneIndex = i;
+            });
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && clockSyncEnabled) {
+                    applyClockTick();
+                }
+            });
+
+            zonesContainer.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('[data-role="remove-zone"]');
+                if (!removeBtn) return;
+                const idx = Number(removeBtn.dataset.zoneIndex);
+                if (Number.isNaN(idx)) return;
+                removeZone(idx);
+            });
+
+            zonesContainer.addEventListener('input', (e) => {
+                const el = e.target;
+                if (!(el instanceof HTMLInputElement)) return;
+                if (el.dataset.role !== 'time-input') return;
+
+                const idx = Number(el.dataset.zoneIndex);
+                if (Number.isNaN(idx) || !zones[idx]) return;
+
+                stopClockSync();
+                zones[idx].timeValue = el.value;
+                activeSourceIndex = idx;
+                lastFocusedTimeZoneIndex = idx;
+                updateValueSetClass(el);
+                computeAllFromSource(activeSourceIndex);
+            });
+
+            zonesContainer.addEventListener('change', (e) => {
+                const target = e.target;
+                if (!target || !target.dataset) return;
+
+                const rowIdx = Number(target.dataset.zoneIndex);
+                if (Number.isNaN(rowIdx) || !zones[rowIdx]) return;
+
+                if (target.dataset.role === 'timezone-select') {
+                    zones[rowIdx].zoneValue = target.value;
+                    zones[rowIdx].timeValue = getCurrentTimeInZone(target.value);
+                    activeSourceIndex = rowIdx;
+                    lastFocusedTimeZoneIndex = rowIdx;
+                    computeAllFromSource(activeSourceIndex);
+                }
+            });
+
+            zonesContainer.addEventListener('blur', (e) => {
+                const target = e.target;
+                if (!(target instanceof HTMLInputElement)) return;
+                if (target.dataset.role !== 'time-input') return;
+                updateValueSetClass(target);
+            }, true);
+
+            function applyZoneRowDragCursor() {
+                document.body.classList.add('is-dragging-zone-row');
+            }
+
+            function clearZoneRowDragCursor() {
+                document.body.classList.remove('is-dragging-zone-row');
+            }
+
+            function clearReorderHover() {
+                zonesContainer.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            }
+
+            function finishZoneRowDragUi() {
+                reorderPointerId = null;
+                reorderHandleEl = null;
+                reorderFromIndex = null;
+                reorderPendingFromIndex = null;
+                reorderActivated = false;
+                clearZoneRowDragCursor();
+                clearReorderHover();
+                zonesContainer.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+            }
+
+            function findZoneRowIndexAtPoint(clientX, clientY) {
+                const rows = zonesContainer.querySelectorAll('.time-zone');
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i].getBoundingClientRect();
+                    if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+                        return Number(rows[i].dataset.zoneIndex);
+                    }
+                }
+                return null;
+            }
+
+            function updateReorderHover(clientX, clientY) {
+                clearReorderHover();
+                if (reorderFromIndex === null) return;
+                const over = findZoneRowIndexAtPoint(clientX, clientY);
+                if (over === null || over === reorderFromIndex) return;
+                const row = zonesContainer.querySelector(`[data-zone-index="${over}"]`);
+                if (row) row.classList.add('drag-over');
+            }
+
+            function suppressNextDocumentClick() {
+                const stop = (ev) => {
+                    document.removeEventListener('click', stop, true);
+                    window.clearTimeout(tid);
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                };
+                const tid = window.setTimeout(() => document.removeEventListener('click', stop, true), 400);
+                document.addEventListener('click', stop, true);
+            }
+
+            function onReorderPointerMove(e) {
+                if (reorderPointerId === null || e.pointerId !== reorderPointerId) return;
+                if (reorderPendingFromIndex === null) return;
+
+                const dx = e.clientX - reorderStartX;
+                const dy = e.clientY - reorderStartY;
+                if (!reorderActivated) {
+                    if (dx * dx + dy * dy < REORDER_MOVE_THRESHOLD_PX * REORDER_MOVE_THRESHOLD_PX) return;
+                    reorderActivated = true;
+                    reorderFromIndex = reorderPendingFromIndex;
+                    const row = zonesContainer.querySelector(`[data-zone-index="${reorderFromIndex}"]`);
+                    if (row) row.classList.add('dragging');
+                    if (e.pointerType !== 'mouse') e.preventDefault();
+                }
+
+                updateReorderHover(e.clientX, e.clientY);
+            }
+
+            function endReorderPointer(e, cancelled) {
+                if (reorderPointerId === null || e.pointerId !== reorderPointerId) return;
+
+                const handle = reorderHandleEl;
+                try {
+                    if (handle && handle.releasePointerCapture) handle.releasePointerCapture(e.pointerId);
+                } catch (err) {}
+
+                let didSwap = false;
+                if (!cancelled && reorderActivated && reorderFromIndex !== null) {
+                    const over = findZoneRowIndexAtPoint(e.clientX, e.clientY);
+                    if (over !== null && over !== reorderFromIndex) {
+                        swapZones(reorderFromIndex, over);
+                        didSwap = true;
+                    }
+                }
+
+                if (didSwap) suppressNextDocumentClick();
+
+                finishZoneRowDragUi();
+            }
+
+            zonesContainer.addEventListener('pointerdown', (e) => {
+                if (!editMode) return;
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                const handle = e.target.closest('[data-role="drag-handle"]');
+                if (!handle || handle.disabled) return;
+
+                const row = handle.closest('[data-zone-index]');
+                if (!row) return;
+
+                reorderPointerId = e.pointerId;
+                reorderHandleEl = handle;
+                reorderPendingFromIndex = Number(row.dataset.zoneIndex);
+                reorderStartX = e.clientX;
+                reorderStartY = e.clientY;
+                reorderActivated = false;
+                applyZoneRowDragCursor();
+
+                try {
+                    handle.setPointerCapture(e.pointerId);
+                } catch (err) {}
+
+                const moveOpts = { capture: true, passive: false };
+                window.addEventListener('pointermove', onReorderPointerMove, moveOpts);
+                window.addEventListener('pointerup', onReorderPointerUp, moveOpts);
+                window.addEventListener('pointercancel', onReorderPointerCancel, moveOpts);
+            }, true);
+
+            function onReorderPointerUp(e) {
+                if (reorderPointerId === null || e.pointerId !== reorderPointerId) return;
+                const moveOpts = { capture: true, passive: false };
+                window.removeEventListener('pointermove', onReorderPointerMove, moveOpts);
+                window.removeEventListener('pointerup', onReorderPointerUp, moveOpts);
+                window.removeEventListener('pointercancel', onReorderPointerCancel, moveOpts);
+                endReorderPointer(e, false);
+            }
+
+            function onReorderPointerCancel(e) {
+                if (reorderPointerId === null || e.pointerId !== reorderPointerId) return;
+                const moveOpts = { capture: true, passive: false };
+                window.removeEventListener('pointermove', onReorderPointerMove, moveOpts);
+                window.removeEventListener('pointerup', onReorderPointerUp, moveOpts);
+                window.removeEventListener('pointercancel', onReorderPointerCancel, moveOpts);
+                endReorderPointer(e, true);
+            }
+        }
+
+        function init() {
+            const loaded = tryLoad();
+            if (loaded) {
+                zones = loaded.zones;
+                activeSourceIndex = loaded.sourceIndex;
+            } else {
+                const unique = new Set();
+                while (unique.size < MIN_ZONES + 1 && unique.size < MAX_ZONES) {
+                    unique.add(getRandomTimeZone());
+                }
+                zones = Array.from(unique).slice(0, 3).map((v, i) => ({
+                    id: generateId(),
+                    zoneValue: v,
+                    timeValue: '',
+                    colorIndex: i % ZONE_BG.length
+                }));
+                activeSourceIndex = 0;
+            }
+
+            ensureMinMax();
+
+            // Freshen the active source to "now" so times aren't stale after refresh.
+            zones[activeSourceIndex].timeValue = getCurrentTimeInZone(zones[activeSourceIndex].zoneValue);
+
+            render();
+            bindEvents();
+            setEditMode(false);
+            computeAllFromSource(activeSourceIndex, { skipPersist: true });
+            syncControls();
+            startClockSync();
+            lastFocusedTimeZoneIndex = activeSourceIndex;
+        }
+
+        window.addEventListener('load', init);
+    })();
 </script>
 
 
