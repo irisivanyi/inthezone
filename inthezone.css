@@ -20,6 +20,7 @@
     --zone-enter-blur: 8px;
     --chrome-blur: 4px;
     --chrome-blur-fade-start: 80%;
+    --button-blur: 12px;
 }
 
 .all-content {
@@ -644,6 +645,14 @@ select, input:focus {
   width: auto;
   position: relative;
   white-space: nowrap;
+}
+
+/* Frosted blur on transparent buttons */
+.button:not(#button-done),
+#icon,
+.remove-zone {
+    backdrop-filter: blur(var(--button-blur));
+    -webkit-backdrop-filter: blur(var(--button-blur));
 }
 
 /* Primary actions: match default button text (not placeholder grey) */
