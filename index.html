@@ -18,33 +18,44 @@
 
 <div class="time-functions">
 <div class="all-time-zones" id="zones-container"></div>
-
-<div class="add">
-    <div class="button-container">
-    <button type="button" class="button" id="button-dashed"><img src="add.svg" alt="Add">Add
-    </button>
-    </div>
-</div>
 </div>
 
 
 <div class="bottom-content">
-    <div id="reset-button-container" class="bottom-actions">
-        <button type="button" class="bottom-toolbar-btn" id="icon" aria-label="Reset to current time"></button>
-        <div class="button-container">
-            <button type="button" class="button bottom-toolbar-btn" id="button-schedule">
-                <img src="schedule.svg" alt="Schedule">Schedule meeting
-            </button>
+    <div class="bottom-toolbar">
+        <div class="bottom-actions bottom-actions--default" id="reset-button-container">
+            <button type="button" class="bottom-toolbar-btn" id="icon" aria-label="Reset to current time"></button>
+            <div class="button-container">
+                <button type="button" class="button bottom-toolbar-btn" id="button-schedule">
+                    <img src="schedule.svg" alt="Schedule">Schedule meeting
+                </button>
+            </div>
+            <div class="button-container">
+                <button type="button" class="button bottom-toolbar-btn" id="button-edit" aria-label="Edit">
+                    <img class="edit-button-icon" src="edit.svg" alt="">
+                    <span class="edit-button-label">Edit</span>
+                </button>
+                <div class="modal-down">Coming shortly</div>
+            </div>
+            <div class="button-container about-button-container">
+                <a href="https://irisivanyi.com" target="_blank" rel="noopener noreferrer" class="button bottom-toolbar-btn" id="button-about">
+                    <img src="info.svg" alt="">About
+                </a>
+            </div>
         </div>
-        <div class="button-container">
-            <button type="button" class="button bottom-toolbar-btn" id="button-edit" aria-label="Edit">
-                <img class="edit-button-icon" src="edit.svg" alt="">
-                <span class="edit-button-label">Edit</span>
-            </button>
-            <div class="modal-down">Coming shortly</div>
+        <div class="bottom-actions bottom-actions--edit" aria-hidden="true">
+            <div class="button-container">
+                <button type="button" class="button bottom-toolbar-btn" id="button-dashed"><img src="add.svg" alt="Add">Add
+                </button>
+            </div>
+            <div class="button-container">
+                <button type="button" class="button bottom-toolbar-btn" id="button-done" aria-label="Done">
+                    <img src="done.svg" alt="">
+                    <span>Done</span>
+                </button>
+            </div>
         </div>
     </div>
-    <p><a href="https://pattern.works" target="_blank">pattern.works</a>, 2026</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js"></script>
@@ -406,7 +417,10 @@ buttonContainers.forEach(container => {
         const addBtn = document.getElementById('button-dashed');
         const iconBtn = document.getElementById('icon');
         const editToggleBtn = document.getElementById('button-edit');
+        const doneBtn = document.getElementById('button-done');
         const scheduleBtn = document.getElementById('button-schedule');
+        const defaultToolbar = document.querySelector('.bottom-actions--default');
+        const editToolbar = document.querySelector('.bottom-actions--edit');
 
         /** Row whose time input last had focus — used for Schedule; falls back with activeSourceIndex at init */
         let lastFocusedTimeZoneIndex = 0;
@@ -431,6 +445,9 @@ buttonContainers.forEach(container => {
         let zones = [];
         let editMode = false;
         let activeSourceIndex = 0;
+        let zoneEnterAnimating = false;
+        const ZONE_SHIFT_MS = 450;
+        const ZONE_ENTER_MS = 350;
         /** Pointer-based reorder only (no HTML5 DnD — avoids broken cursor during native drag). */
         const REORDER_MOVE_THRESHOLD_PX = 6;
         let reorderPointerId = null;
@@ -712,15 +729,76 @@ buttonContainers.forEach(container => {
             return row;
         }
 
-        function render() {
+        function render(options = {}) {
             if (!zonesContainer) return;
             zonesContainer.innerHTML = '';
-            zones.forEach((z, i) => zonesContainer.appendChild(createZoneRow(z, i)));
+            zones.forEach((z, i) => {
+                const row = createZoneRow(z, i);
+                if (options.enteringZoneId && z.id === options.enteringZoneId) {
+                    row.classList.add('zone-row-entering');
+                }
+                zonesContainer.appendChild(row);
+            });
+        }
+
+        function animatePrependedZone(newZoneId, firstRects) {
+            if (!zonesContainer) return;
+
+            const newRow = zonesContainer.querySelector(`[data-zone-id="${CSS.escape(String(newZoneId))}"]`);
+            const shiftedRows = [...zonesContainer.querySelectorAll('.time-zone')].filter(row => row !== newRow);
+
+            shiftedRows.forEach((row, i) => {
+                const first = firstRects[i];
+                if (!first) return;
+                const last = row.getBoundingClientRect();
+                const dx = first.left - last.left;
+                const dy = first.top - last.top;
+                if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+                row.style.transition = 'none';
+                row.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+            });
+
+            void zonesContainer.offsetHeight;
+
+            shiftedRows.forEach(row => {
+                if (!row.style.transform) return;
+                row.classList.add('zone-row-shift');
+            });
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    shiftedRows.forEach(row => {
+                        if (!row.classList.contains('zone-row-shift')) return;
+                        row.style.transition = '';
+                        row.style.transform = '';
+                    });
+                });
+            });
+
+            zoneEnterAnimating = true;
+            if (addBtn) addBtn.disabled = true;
+
+            window.setTimeout(() => {
+                if (newRow) newRow.classList.add('zone-row-entering--visible');
+            }, ZONE_SHIFT_MS);
+
+            window.setTimeout(() => {
+                shiftedRows.forEach(row => {
+                    row.classList.remove('zone-row-shift');
+                    row.style.transition = '';
+                    row.style.transform = '';
+                });
+                if (newRow) {
+                    newRow.classList.remove('zone-row-entering', 'zone-row-entering--visible');
+                }
+                zoneEnterAnimating = false;
+                syncControls();
+            }, ZONE_SHIFT_MS + ZONE_ENTER_MS + 50);
         }
 
         function syncControls() {
             if (!zonesContainer) return;
-            if (addBtn) addBtn.disabled = zones.length >= MAX_ZONES;
+            if (addBtn) addBtn.disabled = zoneEnterAnimating || zones.length >= MAX_ZONES;
 
             const removeBtns = zonesContainer.querySelectorAll('[data-role="remove-zone"]');
             removeBtns.forEach(btn => {
@@ -733,12 +811,11 @@ buttonContainers.forEach(container => {
             editMode = !!next;
             document.body.classList.toggle('edit-mode', editMode);
 
-            if (editToggleBtn) {
-                const labelEl = editToggleBtn.querySelector('.edit-button-label');
-                const iconEl = editToggleBtn.querySelector('.edit-button-icon');
-                if (labelEl) labelEl.textContent = editMode ? 'Done' : 'Edit';
-                if (iconEl) iconEl.src = editMode ? 'done.svg' : 'edit.svg';
-                editToggleBtn.setAttribute('aria-label', editMode ? 'Done' : 'Edit');
+            if (defaultToolbar) {
+                defaultToolbar.setAttribute('aria-hidden', editMode ? 'true' : 'false');
+            }
+            if (editToolbar) {
+                editToolbar.setAttribute('aria-hidden', editMode ? 'false' : 'true');
             }
 
             // Hide placeholder modals that say "Coming soon..." once the feature exists.
@@ -752,6 +829,7 @@ buttonContainers.forEach(container => {
 
         function addZone() {
             if (zones.length >= MAX_ZONES) return;
+            if (zoneEnterAnimating) return;
 
             const sourceIndex = clamp(activeSourceIndex, 0, zones.length - 1);
             const source = zones[sourceIndex];
@@ -767,8 +845,22 @@ buttonContainers.forEach(container => {
                 colorIndex: nextColor % ZONE_BG.length
             };
 
-            zones.push(newZone);
-            render();
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const existingRows = zonesContainer
+                ? [...zonesContainer.querySelectorAll('.time-zone')]
+                : [];
+            const firstRects = existingRows.map(row => row.getBoundingClientRect());
+
+            zones.unshift(newZone);
+            activeSourceIndex = clamp(activeSourceIndex + 1, 0, zones.length - 1);
+
+            if (reduceMotion) {
+                render();
+            } else {
+                render({ enteringZoneId: newZone.id });
+                animatePrependedZone(newZone.id, firstRects);
+            }
+
             computeAllFromSource(activeSourceIndex, { skipPersist: true });
             syncControls();
             schedulePersist();
@@ -868,7 +960,14 @@ buttonContainers.forEach(container => {
             if (editToggleBtn) {
                 editToggleBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    setEditMode(!editMode);
+                    setEditMode(true);
+                });
+            }
+
+            if (doneBtn) {
+                doneBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setEditMode(false);
                 });
             }
 
