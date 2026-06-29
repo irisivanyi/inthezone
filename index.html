@@ -446,8 +446,25 @@ buttonContainers.forEach(container => {
         let editMode = false;
         let activeSourceIndex = 0;
         let zoneEnterAnimating = false;
+        let zoneExitAnimating = false;
+        let zoneReorderAnimating = false;
         const ZONE_SHIFT_MS = 450;
         const ZONE_ENTER_MS = 350;
+        const ZONE_EXIT_MS = 350;
+        /** Start the second phase while the first is still running (matches add enter / remove shift overlap) */
+        const ZONE_ANIM_OVERLAP_MS = Math.round(ZONE_SHIFT_MS * 0.38);
+
+        function updateZoneCardsAnimatingClass() {
+            document.body.classList.toggle('zone-cards-animating', zoneEnterAnimating || zoneExitAnimating || zoneReorderAnimating);
+        }
+
+        function cleanupFlipShiftRows(rows) {
+            rows.forEach(row => {
+                row.classList.remove('zone-row-shift');
+                row.style.transition = '';
+                row.style.transform = '';
+            });
+        }
         /** Pointer-based reorder only (no HTML5 DnD — avoids broken cursor during native drag). */
         const REORDER_MOVE_THRESHOLD_PX = 6;
         let reorderPointerId = null;
@@ -741,14 +758,13 @@ buttonContainers.forEach(container => {
             });
         }
 
-        function animatePrependedZone(newZoneId, firstRects) {
-            if (!zonesContainer) return;
+        function flipShiftRows(rows, getFirstRect) {
+            if (!zonesContainer) return [];
 
-            const newRow = zonesContainer.querySelector(`[data-zone-id="${CSS.escape(String(newZoneId))}"]`);
-            const shiftedRows = [...zonesContainer.querySelectorAll('.time-zone')].filter(row => row !== newRow);
+            const movingRows = [];
 
-            shiftedRows.forEach((row, i) => {
-                const first = firstRects[i];
+            rows.forEach(row => {
+                const first = getFirstRect(row);
                 if (!first) return;
                 const last = row.getBoundingClientRect();
                 const dx = first.left - last.left;
@@ -756,33 +772,41 @@ buttonContainers.forEach(container => {
                 if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
                 row.style.transition = 'none';
                 row.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+                movingRows.push(row);
             });
 
             void zonesContainer.offsetHeight;
 
-            shiftedRows.forEach(row => {
-                if (!row.style.transform) return;
+            movingRows.forEach(row => {
                 row.classList.add('zone-row-shift');
             });
 
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    shiftedRows.forEach(row => {
-                        if (!row.classList.contains('zone-row-shift')) return;
+                    movingRows.forEach(row => {
                         row.style.transition = '';
                         row.style.transform = '';
                     });
                 });
             });
 
-            zoneEnterAnimating = true;
-            if (addBtn) addBtn.disabled = true;
+            return movingRows;
+        }
 
-            window.setTimeout(() => {
-                if (newRow) newRow.classList.add('zone-row-entering--visible');
-            }, ZONE_SHIFT_MS);
+        function animatePrependedZone(newZoneId, firstRects) {
+            if (!zonesContainer) return;
 
-            window.setTimeout(() => {
+            const newRow = zonesContainer.querySelector(`[data-zone-id="${CSS.escape(String(newZoneId))}"]`);
+            const shiftedRows = [...zonesContainer.querySelectorAll('.time-zone')].filter(row => row !== newRow);
+            const movingRows = flipShiftRows(shiftedRows, row => firstRects[shiftedRows.indexOf(row)]);
+
+            syncControls();
+
+            let enterStarted = false;
+            let overlapTimer = null;
+            let fallbackTimer = null;
+
+            const cleanup = () => {
                 shiftedRows.forEach(row => {
                     row.classList.remove('zone-row-shift');
                     row.style.transition = '';
@@ -792,13 +816,31 @@ buttonContainers.forEach(container => {
                     newRow.classList.remove('zone-row-entering', 'zone-row-entering--visible');
                 }
                 zoneEnterAnimating = false;
+                updateZoneCardsAnimatingClass();
                 syncControls();
-            }, ZONE_SHIFT_MS + ZONE_ENTER_MS + 50);
+            };
+
+            const startEnter = () => {
+                if (enterStarted) return;
+                enterStarted = true;
+                if (overlapTimer) window.clearTimeout(overlapTimer);
+                if (fallbackTimer) window.clearTimeout(fallbackTimer);
+                if (newRow) newRow.classList.add('zone-row-entering--visible');
+                window.setTimeout(cleanup, ZONE_ENTER_MS + 50);
+            };
+
+            if (movingRows.length === 0) {
+                startEnter();
+                return;
+            }
+
+            overlapTimer = window.setTimeout(startEnter, ZONE_ANIM_OVERLAP_MS);
+            fallbackTimer = window.setTimeout(startEnter, ZONE_SHIFT_MS + 100);
         }
 
         function syncControls() {
             if (!zonesContainer) return;
-            if (addBtn) addBtn.disabled = zoneEnterAnimating || zones.length >= MAX_ZONES;
+            if (addBtn) addBtn.disabled = zones.length >= MAX_ZONES;
 
             const removeBtns = zonesContainer.querySelectorAll('[data-role="remove-zone"]');
             removeBtns.forEach(btn => {
@@ -829,7 +871,7 @@ buttonContainers.forEach(container => {
 
         function addZone() {
             if (zones.length >= MAX_ZONES) return;
-            if (zoneEnterAnimating) return;
+            if (zoneEnterAnimating || zoneExitAnimating || zoneReorderAnimating) return;
 
             const sourceIndex = clamp(activeSourceIndex, 0, zones.length - 1);
             const source = zones[sourceIndex];
@@ -857,6 +899,8 @@ buttonContainers.forEach(container => {
             if (reduceMotion) {
                 render();
             } else {
+                zoneEnterAnimating = true;
+                updateZoneCardsAnimatingClass();
                 render({ enteringZoneId: newZone.id });
                 animatePrependedZone(newZone.id, firstRects);
             }
@@ -870,15 +914,80 @@ buttonContainers.forEach(container => {
             if (!editMode) return;
             if (zones.length <= MIN_ZONES) return;
             if (index < 0 || index >= zones.length) return;
+            if (zoneEnterAnimating || zoneExitAnimating || zoneReorderAnimating) return;
+            if (!zonesContainer) return;
 
-            zones.splice(index, 1);
-            if (activeSourceIndex === index) activeSourceIndex = Math.min(index, zones.length - 1);
-            else if (activeSourceIndex > index) activeSourceIndex -= 1;
+            const finishRemove = () => {
+                zones.splice(index, 1);
+                if (activeSourceIndex === index) activeSourceIndex = Math.min(index, zones.length - 1);
+                else if (activeSourceIndex > index) activeSourceIndex -= 1;
 
-            render();
-            computeAllFromSource(activeSourceIndex, { skipPersist: true });
+                render();
+                computeAllFromSource(activeSourceIndex, { skipPersist: true });
+                syncControls();
+                schedulePersist();
+            };
+
+            const removedId = zones[index].id;
+            const row = zonesContainer.querySelector(`[data-zone-id="${CSS.escape(String(removedId))}"]`);
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (!row || reduceMotion) {
+                finishRemove();
+                return;
+            }
+
+            zoneExitAnimating = true;
+            updateZoneCardsAnimatingClass();
             syncControls();
-            schedulePersist();
+
+            row.classList.add('zone-row-exiting');
+            requestAnimationFrame(() => {
+                row.classList.add('zone-row-exiting--active');
+            });
+
+            let shiftStarted = false;
+            let overlapTimer = null;
+            let fallbackTimer = null;
+
+            const performShift = () => {
+                if (shiftStarted) return;
+                shiftStarted = true;
+                if (overlapTimer) window.clearTimeout(overlapTimer);
+                if (fallbackTimer) window.clearTimeout(fallbackTimer);
+
+                const firstRectsById = new Map();
+                zonesContainer.querySelectorAll('.time-zone').forEach(zoneRow => {
+                    if (zoneRow.dataset.zoneId !== String(removedId)) {
+                        firstRectsById.set(zoneRow.dataset.zoneId, zoneRow.getBoundingClientRect());
+                    }
+                });
+
+                zones.splice(index, 1);
+                if (activeSourceIndex === index) activeSourceIndex = Math.min(index, zones.length - 1);
+                else if (activeSourceIndex > index) activeSourceIndex -= 1;
+
+                render();
+                computeAllFromSource(activeSourceIndex, { skipPersist: true });
+                schedulePersist();
+
+                const remainingRows = [...zonesContainer.querySelectorAll('.time-zone')];
+                flipShiftRows(remainingRows, zoneRow => firstRectsById.get(zoneRow.dataset.zoneId));
+
+                window.setTimeout(() => {
+                    remainingRows.forEach(zoneRow => {
+                        zoneRow.classList.remove('zone-row-shift');
+                        zoneRow.style.transition = '';
+                        zoneRow.style.transform = '';
+                    });
+                    zoneExitAnimating = false;
+                    updateZoneCardsAnimatingClass();
+                    syncControls();
+                }, ZONE_SHIFT_MS + 50);
+            };
+
+            overlapTimer = window.setTimeout(performShift, ZONE_ANIM_OVERLAP_MS);
+            fallbackTimer = window.setTimeout(performShift, ZONE_EXIT_MS + 100);
         }
 
         /** Swap two zones (pairwise). Drop target = swap with dragged item only. */
@@ -887,8 +996,16 @@ buttonContainers.forEach(container => {
             if (fromIndex === toIndex) return;
             if (fromIndex < 0 || fromIndex >= zones.length) return;
             if (toIndex < 0 || toIndex >= zones.length) return;
+            if (zoneEnterAnimating || zoneExitAnimating || zoneReorderAnimating) return;
+            if (!zonesContainer) return;
 
             const sourceZoneId = zones[activeSourceIndex] ? zones[activeSourceIndex].id : null;
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            const firstRectsById = new Map();
+            zonesContainer.querySelectorAll('.time-zone').forEach(zoneRow => {
+                firstRectsById.set(zoneRow.dataset.zoneId, zoneRow.getBoundingClientRect());
+            });
 
             const a = zones[fromIndex];
             zones[fromIndex] = zones[toIndex];
@@ -899,10 +1016,29 @@ buttonContainers.forEach(container => {
                 activeSourceIndex = idx >= 0 ? idx : 0;
             }
 
+            if (reduceMotion) {
+                render();
+                computeAllFromSource(activeSourceIndex, { skipPersist: true });
+                syncControls();
+                schedulePersist();
+                return;
+            }
+
+            zoneReorderAnimating = true;
+            updateZoneCardsAnimatingClass();
             render();
             computeAllFromSource(activeSourceIndex, { skipPersist: true });
-            syncControls();
             schedulePersist();
+
+            const allRows = [...zonesContainer.querySelectorAll('.time-zone')];
+            flipShiftRows(allRows, zoneRow => firstRectsById.get(zoneRow.dataset.zoneId));
+
+            window.setTimeout(() => {
+                cleanupFlipShiftRows(allRows);
+                zoneReorderAnimating = false;
+                updateZoneCardsAnimatingClass();
+                syncControls();
+            }, ZONE_SHIFT_MS + 50);
         }
 
         function stopClockSync() {

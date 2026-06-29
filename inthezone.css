@@ -149,10 +149,28 @@
         filter var(--zone-enter-duration) var(--zone-enter-ease);
 }
 
+.time-zone.zone-row-exiting {
+    opacity: 1;
+    filter: blur(0);
+    pointer-events: none;
+    transition:
+        opacity var(--zone-enter-duration) var(--zone-enter-ease),
+        filter var(--zone-enter-duration) var(--zone-enter-ease);
+}
+
+.time-zone.zone-row-exiting.zone-row-exiting--active {
+    opacity: 0;
+    filter: blur(var(--zone-enter-blur));
+}
+
 @media (prefers-reduced-motion: reduce) {
     .time-zone.zone-row-shift,
     .time-zone.zone-row-entering,
-    .time-zone.zone-row-entering.zone-row-entering--visible {
+    .time-zone.zone-row-entering.zone-row-entering--visible,
+    .time-zone.zone-row-exiting,
+    .time-zone.zone-row-exiting.zone-row-exiting--active,
+    .drag-handle,
+    .remove-zone {
         transition: none !important;
     }
 }
@@ -179,7 +197,7 @@
     transition: none;
 }
 
-/* Side controls always reserve fixed slots; invisible when not editing so cards don’t resize */
+/* Side controls always reserve fixed slots; fade/blur in edit mode (same as toolbar crossfade) */
 .drag-handle,
 .remove-zone {
     flex: 0 0 auto;
@@ -189,18 +207,51 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    visibility: hidden;
+    opacity: 0;
+    filter: blur(var(--toolbar-state-blur));
     pointer-events: none;
-}
-
-.edit-mode .drag-handle,
-.edit-mode .remove-zone {
-    visibility: visible;
-    pointer-events: auto;
+    transition:
+        opacity var(--toolbar-crossfade-duration) var(--toolbar-crossfade-ease),
+        filter var(--toolbar-crossfade-duration) var(--toolbar-crossfade-ease);
 }
 
 .edit-mode .drag-handle {
+    opacity: 1;
+    filter: blur(0);
+    pointer-events: auto;
     touch-action: none;
+}
+
+.edit-mode .remove-zone:not(:disabled) {
+    opacity: 1;
+    filter: blur(0);
+    pointer-events: auto;
+}
+
+.edit-mode .remove-zone:disabled {
+    opacity: 0.35;
+    filter: blur(0);
+    pointer-events: none;
+}
+
+/* During add/remove card animation, re-rendered side controls snap to visible (no re-fade) */
+body.zone-cards-animating.edit-mode .drag-handle,
+body.zone-cards-animating.edit-mode .remove-zone:not(:disabled) {
+    opacity: 1;
+    filter: blur(0);
+    pointer-events: auto;
+    transition: none;
+}
+
+body.zone-cards-animating.edit-mode .drag-handle {
+    touch-action: none;
+}
+
+body.zone-cards-animating.edit-mode .remove-zone:disabled {
+    opacity: 0.35;
+    filter: blur(0);
+    pointer-events: none;
+    transition: none;
 }
 
 /* Reorder: icon only — no box (12px asset); padding = hit target */
@@ -220,7 +271,6 @@
     appearance: none;
     font: inherit;
     min-height: 0;
-    transition: opacity 0.1s ease-in-out;
 }
 
 .time-zone-toolbar-icon {
@@ -263,7 +313,11 @@
     appearance: none;
     cursor: pointer;
     box-shadow: none;
-    transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out, opacity 0.1s ease-in-out;
+    transition:
+        opacity var(--toolbar-crossfade-duration) var(--toolbar-crossfade-ease),
+        filter var(--toolbar-crossfade-duration) var(--toolbar-crossfade-ease),
+        background-color 0.1s ease-in-out,
+        color 0.1s ease-in-out;
 }
 
 .remove-zone:hover:not(:disabled) {
@@ -277,7 +331,6 @@
 }
 
 .remove-zone:disabled {
-    opacity: 0.35;
     cursor: default;
 }
 
@@ -473,7 +526,8 @@
 
 #button-done:active {
     transform: scale(0.96);
-    background-color: rgba(200, 230, 120, 0.95);
+    background-color: #DEF792;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.10));
 }
 
 
@@ -611,8 +665,10 @@ select, input:focus {
     color: #000000;
 }
 
-#button-done:hover {
-    background-color: rgba(222, 247, 146, 0.92);
+#button-done:hover:not(:disabled) {
+    background-color: #DEF792;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05));
+    cursor: pointer;
     transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out, transform 0.05s ease-in-out;
 }
 
@@ -714,7 +770,7 @@ select, input:focus {
 
 
 #button-dashed {
-    background-color: white;
+    background-color: rgba(0, 0, 0, 0.10);
     border: 1px dashed rgba(0, 0, 0, 0.35);
     transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out, opacity 0.1s ease-in-out;
     color: #000000;
@@ -722,7 +778,7 @@ select, input:focus {
 }
 
 #button-dashed:hover:not(:disabled) {
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: rgba(0, 0, 0, 0.17);
     border: 1px dashed rgba(0, 0, 0, 0.35);
 }
 
@@ -870,62 +926,92 @@ body.is-dragging-zone-row * {
         --zone-remove-inset: 8px;
     }
 
+    #reset-button-container button {
+        color: #000000;
+    }
+
+    .button .modal-down {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .button:hover .modal-down {
+        opacity: 1;
+        visibility: visible;
+        transform: scale(1) translateY(0.6em);
+        pointer-events: auto;
+        left: auto;
+        right: 0;
+    }
+}
+
+/* Touch-only: tap highlights and flat :active — don’t apply on narrow desktop with a mouse */
+@media (hover: none) {
+
     #icon {
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         user-select: none;
-      }
+    }
 
-
-
-
-    #icon, input[type="time"], .button {
+    #icon,
+    input[type="time"],
+    .button {
         -webkit-tap-highlight-color: transparent;
-      }
-    
-      /* Don’t flatten :active on bottom toolbar (reset / schedule / edit) — uses .bottom-toolbar-btn */
-      input[type="time"]:active,
-      .button:active:not(.bottom-toolbar-btn) {
+    }
+
+    /* Don’t flatten :active on bottom toolbar (reset / schedule / edit) — uses .bottom-toolbar-btn */
+    input[type="time"]:active,
+    .button:active:not(.bottom-toolbar-btn) {
         background-color: rgba(0, 0, 0, 0.10);
-      }
+    }
 
+    input[type="time"],
+    #timezone1,
+    #timezone2,
+    #timezone3,
+    .timezone-select {
+        background-color: rgba(0, 0, 0, 0.10);
+    }
 
+    input[type="time"]:focus,
+    #timezone1:focus,
+    #timezone2:focus,
+    #timezone3:focus,
+    .timezone-select:focus {
+        background-color: rgba(0, 0, 0, 0.17);
+    }
 
-
-     input[type="time"], #timezone1, #timezone2, #timezone3, .timezone-select {
-  background-color: rgba(0, 0, 0, 0.10); /* Default background */
-}
-
-input[type="time"]:focus, #timezone1:focus, #timezone2:focus, #timezone3:focus, .timezone-select:focus {
-  background-color: rgba(0, 0, 0, 0.17); /* Focused background */
-}
-
-input[type="time"].value-set, #timezone1.value-set, #timezone2.value-set, #timezone3.value-set, .timezone-select.value-set {
-  background-color: rgba(0, 0, 0, 0.10); /* Background after value is set */
-}
-
+    input[type="time"].value-set,
+    #timezone1.value-set,
+    #timezone2.value-set,
+    #timezone3.value-set,
+    .timezone-select.value-set {
+        background-color: rgba(0, 0, 0, 0.10);
+    }
 
     select {
         text-align: center;
-        text-align-last: center; /* For centering selected text in dropdown */
-        -webkit-appearance: none; /* Remove default styles */
+        text-align-last: center;
+        -webkit-appearance: none;
         -moz-appearance: none;
         appearance: none;
-        padding: 0; /* Reset padding for consistency */
-        margin: 0; /* Reset margin for consistency */
+        padding: 0;
+        margin: 0;
         border: 1px solid transparent;
     }
-    
+
     select:focus {
-        outline: none; /* Remove the outline on focus */
+        outline: none;
     }
 
     input {
         -webkit-appearance: none;
         -moz-appearance: none;
         appearance: none;
-        background: rgba(0, 0, 0, 255);
+        background: rgba(0, 0, 0, 0.10);
         border: none;
         text-align: left;
         font-family: 'Courier New', Courier, monospace;
@@ -936,41 +1022,20 @@ input[type="time"].value-set, #timezone1.value-set, #timezone2.value-set, #timez
         color: #000000;
         border: 1px solid transparent;
     }
-    
 
-    #timezone1, #timezone2, #timezone3, .timezone-select {
-    text-align: center;
-    background-color: rgba(0, 0, 0, 0.10);
-    border: none;
-    padding: 0;
-    margin: 0;
-    color: #000000;
-    height: 2.5em;
-    display: block;
-    line-height: 2.5em;
-    border: 1px solid transparent;
+    #timezone1,
+    #timezone2,
+    #timezone3,
+    .timezone-select {
+        text-align: center;
+        background-color: rgba(0, 0, 0, 0.10);
+        border: none;
+        padding: 0;
+        margin: 0;
+        color: #000000;
+        height: 2.5em;
+        display: block;
+        line-height: 2.5em;
+        border: 1px solid transparent;
     }
-
-    #reset-button-container button {
-        color: #000000; /* Set the desired text color */
-    
-    }
-
-    
-    .button .modal-down {
-        opacity: 0; /* Initially hidden */
-        visibility: hidden; /* Initially hidden */
-        transition: opacity 0.2s ease, visibility 0.2s ease; /* Smooth transition */
-    }
-
-    .button:hover .modal-down {
-        opacity: 1;
-        visibility: visible;
-        transform: scale(1) translateY(0.6em);
-        pointer-events: auto;
-        left: auto; /* Reset left positioning */
-        right: 0; /* Align to the right edge */
-      }
-
-
 }
