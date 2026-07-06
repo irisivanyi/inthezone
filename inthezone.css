@@ -11,16 +11,18 @@
     --zone-remove-slot: calc(var(--zone-toolbar-icon-size) + 0.7em);
     --zone-remove-inset: 4px;
     --toolbar-state-blur: 8px;
-    --toolbar-crossfade-duration: 0.35s;
+    --toolbar-crossfade-duration: 0.1s;
     --toolbar-crossfade-ease: ease;
     --zone-shift-duration: 0.45s;
     --zone-shift-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --zone-enter-duration: 0.35s;
     --zone-enter-ease: ease;
-    --zone-enter-blur: 8px;
     --chrome-blur: 4px;
     --chrome-blur-fade-start: 80%;
     --button-blur: 12px;
+    --zone-card-blur: 12px;
+    --zone-field-blur: 6px;
+    --zone-icon-blur: 3px;
 }
 
 .all-content {
@@ -37,7 +39,7 @@
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 1em;
+    gap: 1.25em;
     width: 100%;
 }
 
@@ -111,7 +113,7 @@
     min-height: var(--zone-card-height);
     max-height: var(--zone-card-height);
     box-sizing: border-box;
-    border-radius: 36px;
+    border-radius: 38px;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -121,13 +123,33 @@
     padding-top: 2%;
     padding-bottom: 2%;
     gap: 1em;
-    border: 1px solid rgba(0, 0, 0, 0);
+    border: 1px solid transparent;
     position: relative;
-
+    background: transparent;
 }
 
-.time-zone:hover {
-    border: 1px solid rgba(0, 0, 0, 0.1);
+/* Blurred colour blob — filter on this layer; bleed extends past the card (see reference) */
+.time-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    background: var(--zone-color, #EAC20E);
+    background-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
+    filter: blur(var(--zone-card-blur));
+    transition: background-image 0.25s ease-in-out;
+    pointer-events: none;
+}
+
+.time-zone > * {
+    position: relative;
+    z-index: 1;
+}
+
+.time-zone:hover::before,
+.time-zone.drag-over::before {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05));
 }
 
 .time-zone.zone-row-shift {
@@ -137,31 +159,23 @@
 
 .time-zone.zone-row-entering {
     opacity: 0;
-    filter: blur(var(--zone-enter-blur));
     pointer-events: none;
 }
 
 .time-zone.zone-row-entering.zone-row-entering--visible {
     opacity: 1;
-    filter: blur(0);
     pointer-events: auto;
-    transition:
-        opacity var(--zone-enter-duration) var(--zone-enter-ease),
-        filter var(--zone-enter-duration) var(--zone-enter-ease);
+    transition: opacity var(--zone-enter-duration) var(--zone-enter-ease);
 }
 
 .time-zone.zone-row-exiting {
     opacity: 1;
-    filter: blur(0);
     pointer-events: none;
-    transition:
-        opacity var(--zone-enter-duration) var(--zone-enter-ease),
-        filter var(--zone-enter-duration) var(--zone-enter-ease);
+    transition: opacity var(--zone-enter-duration) var(--zone-enter-ease);
 }
 
 .time-zone.zone-row-exiting.zone-row-exiting--active {
     opacity: 0;
-    filter: blur(var(--zone-enter-blur));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -187,15 +201,61 @@
     min-width: 0;
 }
 
+/* Wrapper hosts the blurred colour fill (select/input don't reliably render ::before).
+   No overflow:hidden — the blur needs to bleed past its own bounds to be visible at all. */
+.time-zone-main .zone-field {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    height: 2.5em;
+    border-radius: 18px;
+}
+
+/* Blurred fill — border-radius here (not just on the wrapper) is what keeps the soft edge
+   reading as rounded instead of a blurred square; no overflow:hidden so the blur stays visible */
+.time-zone-main .zone-field::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--zone-color) 68%, black 18%);
+    filter: blur(var(--zone-field-blur));
+    pointer-events: none;
+}
+
+.time-zone-main .zone-field:hover::before {
+    background: color-mix(in srgb, var(--zone-color) 62%, black 24%);
+}
+
+.time-zone-main .zone-field:focus-within::before {
+    background: color-mix(in srgb, var(--zone-color) 58%, black 28%);
+}
+
 /* Fill the middle column (overrides global 50% / 70% on select + time) */
 .time-zone-main .timezone-select,
 .time-zone-main input[type="time"] {
     width: 100%;
     max-width: 100%;
-    height: 2.5em;
+    height: 100%;
     line-height: 1em;
     box-sizing: border-box;
     transition: none;
+    position: relative;
+    z-index: 1;
+    border: none;
+    border-radius: 18px;
+    background: transparent;
+    color: #000000;
+}
+
+.time-zone-main .timezone-select:hover,
+.time-zone-main .timezone-select:active,
+.time-zone-main .timezone-select:focus,
+.time-zone-main input[type="time"]:hover,
+.time-zone-main input[type="time"]:focus {
+    border-radius: 18px;
+    outline: none;
 }
 
 /* Side controls always reserve fixed slots; fade/blur in edit mode (same as toolbar crossfade) */
@@ -255,16 +315,21 @@ body.zone-cards-animating.edit-mode .remove-zone:disabled {
     transition: none;
 }
 
-/* Reorder: icon only — no box (12px asset); padding = hit target */
+/* Reorder: same pill container as remove — blurred 10% black fill, no stroke */
 .drag-handle {
-    flex-basis: var(--zone-drag-slot);
-    width: var(--zone-drag-slot);
-    min-width: var(--zone-drag-slot);
+    position: relative;
+    isolation: isolate;
+    flex-basis: var(--zone-remove-slot);
+    width: var(--zone-remove-slot);
+    min-width: var(--zone-remove-slot);
+    aspect-ratio: 1 / 1;
     margin: 0;
-    padding: 0.5em;
+    padding: 0.35em;
     border: none;
+    outline: none;
+    border-radius: 999px;
     background: transparent;
-    border-radius: 0;
+    color: rgba(0, 0, 0, 0.75);
     box-shadow: none;
     cursor: grab;
     user-select: none;
@@ -272,6 +337,31 @@ body.zone-cards-animating.edit-mode .remove-zone:disabled {
     appearance: none;
     font: inherit;
     min-height: 0;
+    transition:
+        opacity var(--toolbar-crossfade-duration) var(--toolbar-crossfade-ease),
+        filter var(--toolbar-crossfade-duration) var(--toolbar-crossfade-ease),
+        color 0.1s ease-in-out;
+}
+
+/* Fill lives on a blurred layer behind the icon (same technique as the card / field fills) */
+.drag-handle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 999px;
+    background-color: rgba(0, 0, 0, 0.2);
+    filter: blur(var(--zone-icon-blur));
+    transition: background-color 0.1s ease-in-out;
+    pointer-events: none;
+}
+
+.drag-handle:hover:not(:disabled) {
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.drag-handle:hover:not(:disabled)::before {
+    background-color: rgba(0, 0, 0, 0.16);
 }
 
 .time-zone-toolbar-icon {
@@ -297,18 +387,21 @@ body.zone-cards-animating.edit-mode .remove-zone:disabled {
     pointer-events: none;
 }
 
-/* Remove: 10% black fill, no stroke */
+/* Remove: blurred 10% black fill, no stroke */
 .remove-zone {
+    position: relative;
+    isolation: isolate;
     flex-basis: var(--zone-remove-slot);
     width: var(--zone-remove-slot);
     min-width: var(--zone-remove-slot);
+    aspect-ratio: 1 / 1;
     margin: 0 var(--zone-remove-inset) 0 0;
     padding: 0.35em;
     min-height: 0;
     border: none;
     outline: none;
     border-radius: 999px;
-    background-color: rgba(0, 0, 0, 0.1);
+    background: transparent;
     color: rgba(0, 0, 0, 0.75);
     -webkit-appearance: none;
     appearance: none;
@@ -317,13 +410,28 @@ body.zone-cards-animating.edit-mode .remove-zone:disabled {
     transition:
         opacity var(--toolbar-crossfade-duration) var(--toolbar-crossfade-ease),
         filter var(--toolbar-crossfade-duration) var(--toolbar-crossfade-ease),
-        background-color 0.1s ease-in-out,
         color 0.1s ease-in-out;
 }
 
+/* Fill lives on a blurred layer behind the icon (same technique as the card / field fills) */
+.remove-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 999px;
+    background-color: rgba(0, 0, 0, 0.2);
+    filter: blur(var(--zone-icon-blur));
+    transition: background-color 0.1s ease-in-out;
+    pointer-events: none;
+}
+
 .remove-zone:hover:not(:disabled) {
-    background-color: rgba(0, 0, 0, 0.16);
     color: rgba(0, 0, 0, 0.85);
+}
+
+.remove-zone:hover:not(:disabled)::before {
+    background-color: rgba(0, 0, 0, 0.16);
 }
 
 .remove-zone:focus,
@@ -335,25 +443,21 @@ body.zone-cards-animating.edit-mode .remove-zone:disabled {
     cursor: default;
 }
 
-.time-zone.drag-over {
-    outline: 2px solid rgba(0, 0, 0, 0.2);
-    outline-offset: -2px;
-}
 
 .time-zone.dragging {
     opacity: 0.6;
 }
 
 #green {
-    background-color: #DEF792;
+    background-color: #EAC20E;
 }
 
 #blue {
-    background-color: #B6DDFC;
+    background-color: #94C6FF;
 }
 
 #brown {
-    background-color: #CCC8B7;
+    background-color: #CEA6FF;
 }
 
 
@@ -527,8 +631,8 @@ body.zone-cards-animating.edit-mode .remove-zone:disabled {
 
 #button-done:active {
     transform: scale(0.96);
-    background-color: #DEF792;
-    background-image: linear-gradient(rgba(0, 0, 0, 0.10), rgba(0, 0, 0, 0.10));
+    background-color: #000000;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.20));
 }
 
 
@@ -670,13 +774,17 @@ select, input:focus {
 }
 
 #button-done {
-    background-color: #DEF792;
-    color: #000000;
+    background-color: #000000;
+    color: #ffffff;
+}
+
+#button-done img {
+    filter: brightness(0) invert(1);
 }
 
 #button-done:hover:not(:disabled) {
-    background-color: #DEF792;
-    background-image: linear-gradient(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05));
+    background-color: #000000;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10));
     cursor: pointer;
     transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out, transform 0.05s ease-in-out;
 }
@@ -855,6 +963,7 @@ a:hover {
 body {
     margin: 0 auto;
     text-align: center;
+    background-color: #FDFFF5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -1047,4 +1156,12 @@ body.is-dragging-zone-row * {
         line-height: 2.5em;
         border: 1px solid transparent;
     }
+}
+
+/* Keep zone-field controls transparent (fill lives on the wrapper) — wins ties with legacy/touch rules above */
+.time-zone-main .timezone-select,
+.time-zone-main .timezone-select.value-set,
+.time-zone-main input[type="time"],
+.time-zone-main input[type="time"].value-set {
+    background: transparent;
 }

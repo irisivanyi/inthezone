@@ -440,7 +440,7 @@ buttonContainers.forEach(container => {
             'Asia/Tokyo'
         ];
         const NON_LOCAL_TIMEZONES = TIMEZONE_OPTIONS.filter(tz => tz !== 'local');
-        const ZONE_BG = ['#DEF792', '#B6DDFC', '#CCC8B7'];
+        const ZONE_BG = ['#EAC20E', '#CEA6FF', '#94C6FF'];
 
         let zones = [];
         let editMode = false;
@@ -682,7 +682,7 @@ buttonContainers.forEach(container => {
             row.dataset.zoneIndex = String(index);
             row.dataset.zoneId = String(zone.id);
             const ci = typeof zone.colorIndex === 'number' ? zone.colorIndex : index;
-            row.style.backgroundColor = ZONE_BG[ci % ZONE_BG.length];
+            row.style.setProperty('--zone-color', ZONE_BG[ci % ZONE_BG.length]);
 
             const dragHandle = document.createElement('button');
             dragHandle.type = 'button';
@@ -736,8 +736,18 @@ buttonContainers.forEach(container => {
             timeInput.value = zone.timeValue || '';
             if (timeInput.value) timeInput.classList.add('value-set');
 
-            main.appendChild(select);
-            main.appendChild(timeInput);
+            // Wrap each control so the blurred colour fill can live on a plain div's ::before
+            // (select/input don't reliably render ::before across browsers).
+            const selectField = document.createElement('div');
+            selectField.className = 'zone-field';
+            selectField.appendChild(select);
+
+            const timeField = document.createElement('div');
+            timeField.className = 'zone-field';
+            timeField.appendChild(timeInput);
+
+            main.appendChild(selectField);
+            main.appendChild(timeField);
 
             row.appendChild(dragHandle);
             row.appendChild(main);
