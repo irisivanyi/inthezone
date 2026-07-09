@@ -440,7 +440,10 @@ buttonContainers.forEach(container => {
             'Asia/Tokyo'
         ];
         const NON_LOCAL_TIMEZONES = TIMEZONE_OPTIONS.filter(tz => tz !== 'local');
-        const ZONE_BG = ['#EAC20E', '#CEA6FF', '#94C6FF'];
+        const ZONE_ORANGE = '#EAC20E';
+        const ZONE_PURPLE = '#CEA6FF';
+        const ZONE_BLUE = '#94C6FF';
+        const ZONE_BG = [ZONE_ORANGE, ZONE_PURPLE, ZONE_BLUE];
 
         let zones = [];
         let editMode = false;
