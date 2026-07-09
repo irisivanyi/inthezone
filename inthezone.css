@@ -23,6 +23,15 @@
     --zone-card-blur: 12px;
     --zone-field-blur: 6px;
     --zone-icon-blur: 3px;
+    /* Opacity-based; background-image / color-mix do not interpolate */
+    --zone-hover-duration: 0.13s;
+    --zone-hover-ease: ease-in-out;
+    /* Field hover: 2× card hover speed (half duration) */
+    --zone-field-hover-duration: calc(var(--zone-hover-duration) / 2);
+    /* Soft focus ring (blurred stroke pseudo — borders can't blur natively) */
+    --zone-field-focus-ring-blur: 1.2px;
+    --zone-field-focus-ring-width: 0.1px;
+    --zone-field-focus-ring-color: rgba(0, 0, 0, 0.5);
 }
 
 .all-content {
@@ -136,9 +145,21 @@
     z-index: 0;
     border-radius: inherit;
     background: var(--zone-color, #EAC20E);
-    background-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
     filter: blur(var(--zone-card-blur));
-    transition: background-image 0.25s ease-in-out;
+    pointer-events: none;
+}
+
+/* Hover darken as a separate layer — opacity animates; gradient background-image does not */
+.time-zone::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    background: rgba(0, 0, 0, 0.05);
+    filter: blur(var(--zone-card-blur));
+    opacity: 0;
+    transition: opacity var(--zone-hover-duration) var(--zone-hover-ease);
     pointer-events: none;
 }
 
@@ -147,9 +168,9 @@
     z-index: 1;
 }
 
-.time-zone:hover::before,
-.time-zone.drag-over::before {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05));
+.time-zone:hover::after,
+.time-zone.drag-over::after {
+    opacity: 1;
 }
 
 .time-zone.zone-row-shift {
@@ -184,6 +205,9 @@
     .time-zone.zone-row-entering.zone-row-entering--visible,
     .time-zone.zone-row-exiting,
     .time-zone.zone-row-exiting.zone-row-exiting--active,
+    .time-zone::after,
+    .time-zone-main .zone-field::before,
+    .time-zone-main .zone-field::after,
     .drag-handle,
     .remove-zone {
         transition: none !important;
@@ -208,28 +232,49 @@
     isolation: isolate;
     width: 100%;
     height: 2.5em;
-    border-radius: 18px;
+    border-radius: 14px;
 }
 
 /* Blurred fill — border-radius here (not just on the wrapper) is what keeps the soft edge
-   reading as rounded instead of a blurred square; no overflow:hidden so the blur stays visible */
+   reading as rounded instead of a blurred square; no overflow:hidden so the blur stays visible.
+   Hover/focus darken uses brightness so ::after can host the soft focus ring. */
 .time-zone-main .zone-field::before {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 0;
-    border-radius: 18px;
+    border-radius: 14px;
     background: color-mix(in srgb, var(--zone-color) 68%, black 18%);
-    filter: blur(var(--zone-field-blur));
+    filter: blur(var(--zone-field-blur)) brightness(1);
+    transition: filter var(--zone-field-hover-duration) var(--zone-hover-ease);
     pointer-events: none;
 }
 
 .time-zone-main .zone-field:hover::before {
-    background: color-mix(in srgb, var(--zone-color) 62%, black 24%);
+    filter: blur(var(--zone-field-blur)) brightness(0.94);
 }
 
 .time-zone-main .zone-field:focus-within::before {
-    background: color-mix(in srgb, var(--zone-color) 58%, black 28%);
+    filter: blur(var(--zone-field-blur)) brightness(0.90);
+}
+
+/* Soft focus outline: stroke a transparent box, then blur it (native border can't blur alone) */
+.time-zone-main .zone-field::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: 14px;
+    border: var(--zone-field-focus-ring-width) solid var(--zone-field-focus-ring-color);
+    background: transparent;
+    opacity: 0;
+    filter: blur(var(--zone-field-focus-ring-blur));
+    transition: opacity var(--zone-field-hover-duration) var(--zone-hover-ease);
+    pointer-events: none;
+}
+
+.time-zone-main .zone-field:focus-within::after {
+    opacity: 1;
 }
 
 /* Fill the middle column (overrides global 50% / 70% on select + time) */
@@ -243,19 +288,25 @@
     transition: none;
     position: relative;
     z-index: 1;
-    border: none;
-    border-radius: 18px;
+    border: 1px solid transparent;
+    border-radius: 14px;
     background: transparent;
     color: #000000;
 }
 
 .time-zone-main .timezone-select:hover,
 .time-zone-main .timezone-select:active,
-.time-zone-main .timezone-select:focus,
-.time-zone-main input[type="time"]:hover,
-.time-zone-main input[type="time"]:focus {
-    border-radius: 18px;
+.time-zone-main input[type="time"]:hover {
+    border-radius: 14px;
     outline: none;
+}
+
+/* Hard focus border off — soft ring lives on .zone-field::after */
+.time-zone-main .timezone-select:focus,
+.time-zone-main input[type="time"]:focus {
+    border-radius: 14px;
+    outline: none;
+    border: 1px solid transparent;
 }
 
 /* Side controls always reserve fixed slots; fade/blur in edit mode (same as toolbar crossfade) */
@@ -668,7 +719,7 @@ input[type="time"]:hover {
 
 input[type="time"]:focus {
     background-color: rgba(0, 0, 0, 0.17);
-    border: 1px solid black;
+    border: 1px solid rgba(0, 0, 0, 0.25);
 }
 
 select, input {
@@ -689,7 +740,7 @@ select, input {
 }
 
 select, input:focus {
-    border: 1px solid black;
+    border: 1px solid rgba(0, 0, 0, 0.25);
 
     outline: none;
 }
@@ -728,7 +779,7 @@ select, input:focus {
 }
 
 #timezone1:focus, #timezone2:focus, #timezone3:focus, .timezone-select:focus {
-    border: 1px solid black;
+    border: 1px solid rgba(0, 0, 0, 0.25);
 
 }
 
