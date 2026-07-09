@@ -11,7 +11,7 @@
     --zone-remove-slot: calc(var(--zone-toolbar-icon-size) + 0.7em);
     --zone-remove-inset: 4px;
     --toolbar-state-blur: 8px;
-    --toolbar-crossfade-duration: 0.1s;
+    --toolbar-crossfade-duration: 0.2s;
     --toolbar-crossfade-ease: ease;
     --zone-shift-duration: 0.45s;
     --zone-shift-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -938,7 +938,7 @@ select, input:focus {
 
 
 #button-dashed {
-    background-color: rgba(0, 0, 0, 0.10);
+    background-color: #FDFFF5;
     border: 1px dashed rgba(0, 0, 0, 0.35);
     transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out, opacity 0.1s ease-in-out;
     color: #000000;
@@ -946,7 +946,7 @@ select, input:focus {
 }
 
 #button-dashed:hover:not(:disabled) {
-    background-color: rgba(0, 0, 0, 0.17);
+    background-color: color-mix(in srgb, #FDFFF5 92%, black 6%);
     border: 1px dashed rgba(0, 0, 0, 0.35);
 }
 
